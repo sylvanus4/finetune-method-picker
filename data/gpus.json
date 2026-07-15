@@ -1,0 +1,32 @@
+{
+  "_note": "Accelerators for LLM FINE-TUNING planning. vram_gb = usable HBM/GDDR/unified memory. bandwidth_gbs = peak memory bandwidth. flops_bf16_tf = approximate DENSE BF16 tensor throughput in TFLOP/s with SPARSITY OFF (the training-relevant number; vendor 'sparse' headlines are ~2x higher and NOT used here). flops_bf16_tf null = no defensible dense-BF16 training spec (pre-order Blackwell Ultra, NPUs/Trainium with different matrix-engine accounting, Apple GPUs with no published tensor-training figure) -> the tool shows VRAM/fit but HIDES the time estimate rather than guess. rent_usd_hr = approx on-demand rate; null = owned/on-prem. price_usd = approx one-device purchase (USD, 2026-07); null = not sold standalone. power_w = board/module TDP. Figures are public specs (2026-07) for PLANNING, not exact guarantees; the time estimate is dominated by MFU (a slider, default 0.3-0.4) so treat wall-clock as a range, never a promise. Override any value in the UI.",
+  "_updated": "2026-07-15",
+  "_flops_sources": "NVIDIA/AMD datasheets, dense BF16 tensor (sparsity off): B200 2.25 PFLOPS, H100/H200 989 TFLOPS, A100 312 TFLOPS, L40S 362, A6000 155, RTX4090 165, RTX3090 71, L4 121, MI300X/MI325X 1307 TFLOPS.",
+  "gpus": [
+    {"id": "gb300", "name": "NVIDIA GB300 (Grace + 2×B300 superchip, 556GB)", "vram_gb": 556, "bandwidth_gbs": 16000, "flops_bf16_tf": null, "rent_usd_hr": 12.0, "price_usd": 90000, "power_w": 2800, "kind": "gpu"},
+    {"id": "gb200", "name": "NVIDIA GB200 (Grace + 2×B200 superchip, 372GB)", "vram_gb": 372, "bandwidth_gbs": 16000, "flops_bf16_tf": 4500, "rent_usd_hr": 21.0, "price_usd": 70000, "power_w": 2700, "kind": "gpu"},
+    {"id": "b300", "name": "NVIDIA B300 (Blackwell Ultra, 288GB)", "vram_gb": 288, "bandwidth_gbs": 8000, "flops_bf16_tf": null, "rent_usd_hr": 5.0, "price_usd": 45000, "power_w": 1200, "kind": "gpu"},
+    {"id": "b200", "name": "NVIDIA B200 (192GB)", "vram_gb": 192, "bandwidth_gbs": 8000, "flops_bf16_tf": 2250, "rent_usd_hr": 5.5, "price_usd": 40000, "power_w": 1000, "kind": "gpu"},
+    {"id": "mi355x", "name": "AMD Instinct MI355X (288GB, CDNA4)", "vram_gb": 288, "bandwidth_gbs": 8000, "flops_bf16_tf": null, "rent_usd_hr": 2.5, "price_usd": 25000, "power_w": 1400, "kind": "amd"},
+    {"id": "mi325x", "name": "AMD Instinct MI325X (256GB)", "vram_gb": 256, "bandwidth_gbs": 6000, "flops_bf16_tf": 1307, "rent_usd_hr": 2.1, "price_usd": 18000, "power_w": 1000, "kind": "amd"},
+    {"id": "mi300x", "name": "AMD Instinct MI300X (192GB)", "vram_gb": 192, "bandwidth_gbs": 5300, "flops_bf16_tf": 1307, "rent_usd_hr": 2.5, "price_usd": 15000, "power_w": 750, "kind": "amd"},
+    {"id": "h200", "name": "NVIDIA H200 (141GB)", "vram_gb": 141, "bandwidth_gbs": 4800, "flops_bf16_tf": 989, "rent_usd_hr": 3.5, "price_usd": 32000, "power_w": 700, "kind": "gpu"},
+    {"id": "h100-80", "name": "NVIDIA H100 80GB SXM", "vram_gb": 80, "bandwidth_gbs": 3350, "flops_bf16_tf": 989, "rent_usd_hr": 2.5, "price_usd": 28000, "power_w": 700, "kind": "gpu"},
+    {"id": "a100-80", "name": "NVIDIA A100 80GB", "vram_gb": 80, "bandwidth_gbs": 2039, "flops_bf16_tf": 312, "rent_usd_hr": 1.8, "price_usd": 15000, "power_w": 400, "kind": "gpu"},
+    {"id": "a100-40", "name": "NVIDIA A100 40GB", "vram_gb": 40, "bandwidth_gbs": 1555, "flops_bf16_tf": 312, "rent_usd_hr": 1.3, "price_usd": 8000, "power_w": 400, "kind": "gpu"},
+    {"id": "l40s", "name": "NVIDIA L40S (48GB)", "vram_gb": 48, "bandwidth_gbs": 864, "flops_bf16_tf": 362, "rent_usd_hr": 1.0, "price_usd": 9000, "power_w": 350, "kind": "gpu"},
+    {"id": "a6000", "name": "NVIDIA RTX A6000 (48GB)", "vram_gb": 48, "bandwidth_gbs": 768, "flops_bf16_tf": 155, "rent_usd_hr": 0.8, "price_usd": 4800, "power_w": 300, "kind": "gpu"},
+    {"id": "rtx-pro-6000", "name": "NVIDIA RTX PRO 6000 Blackwell (96GB)", "vram_gb": 96, "bandwidth_gbs": 1792, "flops_bf16_tf": null, "rent_usd_hr": 1.5, "price_usd": 8500, "power_w": 600, "kind": "gpu"},
+    {"id": "rtx4090", "name": "NVIDIA RTX 4090 (24GB)", "vram_gb": 24, "bandwidth_gbs": 1008, "flops_bf16_tf": 165, "rent_usd_hr": 0.4, "price_usd": 1800, "power_w": 450, "kind": "gpu"},
+    {"id": "rtx3090", "name": "NVIDIA RTX 3090 (24GB)", "vram_gb": 24, "bandwidth_gbs": 936, "flops_bf16_tf": 71, "rent_usd_hr": 0.3, "price_usd": 1000, "power_w": 350, "kind": "gpu"},
+    {"id": "l4", "name": "NVIDIA L4 (24GB)", "vram_gb": 24, "bandwidth_gbs": 300, "flops_bf16_tf": 121, "rent_usd_hr": 0.5, "price_usd": 2500, "power_w": 72, "kind": "gpu"},
+    {"id": "dgx-spark", "name": "NVIDIA DGX Spark (GB10, 128GB unified)", "vram_gb": 128, "bandwidth_gbs": 273, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": 4000, "power_w": 240, "kind": "gpu"},
+    {"id": "m4-max-128", "name": "Apple M4 Max (128GB)", "vram_gb": 110, "bandwidth_gbs": 546, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": 4700, "power_w": 140, "kind": "apple"},
+    {"id": "m3-max-128", "name": "Apple M3 Max (128GB)", "vram_gb": 110, "bandwidth_gbs": 400, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": 4000, "power_w": 140, "kind": "apple"},
+    {"id": "m2-ultra-192", "name": "Apple M2 Ultra (192GB)", "vram_gb": 170, "bandwidth_gbs": 800, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": 6600, "power_w": 295, "kind": "apple"},
+    {"id": "furiosa-rngd", "name": "FuriosaAI RNGD (48GB HBM3)", "vram_gb": 48, "bandwidth_gbs": 1500, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": null, "power_w": 180, "kind": "npu"},
+    {"id": "rebellions-rebel100", "name": "Rebellions Rebel100 (144GB HBM3E)", "vram_gb": 144, "bandwidth_gbs": 4800, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": null, "power_w": 200, "kind": "npu"},
+    {"id": "gaudi3", "name": "Intel Gaudi 3 (128GB HBM2e)", "vram_gb": 128, "bandwidth_gbs": 3700, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": 15000, "power_w": 900, "kind": "npu"},
+    {"id": "trainium2", "name": "AWS Trainium2 (96GB HBM3, cloud-only)", "vram_gb": 96, "bandwidth_gbs": 2900, "flops_bf16_tf": null, "rent_usd_hr": null, "price_usd": null, "power_w": null, "kind": "npu"}
+  ]
+}

@@ -1,0 +1,27 @@
+name: validate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Unit test estimation core
+        run: node test/compute.test.cjs
+      - name: Independent formula audit (Python reimplementation, JS parity)
+        run: |
+          node audit/js_dump.cjs > /tmp/js.json
+          python3 audit/reference_audit.py /tmp/js.json
+      - name: Validate JSON data
+        run: |
+          for f in data/*.json; do node -e "JSON.parse(require('fs').readFileSync('$f'))" && echo "ok $f"; done
+      - name: Sanity-check HTML wiring
+        run: |
+          grep -q 'assets/compute.js' index.html
+          grep -q 'assets/app.js' index.html
+          echo "html wiring ok"
