@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODELS = {m["id"]: m for m in json.loads((ROOT / "data/models.json").read_text())["models"]}
 GPUS = {g["id"]: g for g in json.loads((ROOT / "data/gpus.json").read_text())["gpus"]}
 
-WEIGHT_BF16, WEIGHT_NF4, GRAD_BF16, MASTER_FP32 = 2, 0.5, 2, 4
+WEIGHT_BF16, WEIGHT_NF4, WEIGHT_INT8, GRAD_BF16, MASTER_FP32 = 2, 0.5, 1, 2, 4
 OPT_STATE = {"adamw": 8, "adamw_8bit": 2, "paged_adamw": 8}
 ACT_BYTES, GC_FACTOR, GC_TAX = 16, 0.22, 1.30
 OVER_BASE, OVER_FRAC = 1.2, 0.05
@@ -19,6 +19,7 @@ CFGS = [
     dict(tuning="full", numGpus=1, perDeviceBatch=1, gradAccum=1, seqLen=2048, gradCkpt=False, optimizer="adamw", datasetExamples=10000, avgTokensPerExample=512, epochs=3, mfu=0.35),
     dict(tuning="lora", numGpus=2, perDeviceBatch=2, gradAccum=8, seqLen=4096, gradCkpt=True, optimizer="adamw", loraR=16, targetModules="all", datasetExamples=5000, avgTokensPerExample=1024, epochs=2, mfu=0.4),
     dict(tuning="qlora", numGpus=1, perDeviceBatch=1, gradAccum=16, seqLen=2048, gradCkpt=True, optimizer="paged_adamw", loraR=32, targetModules="attn_all", datasetExamples=2000, avgTokensPerExample=512, epochs=1, mfu=0.3),
+    dict(tuning="lora_8bit", numGpus=1, perDeviceBatch=1, gradAccum=16, seqLen=2048, gradCkpt=True, optimizer="adamw_8bit", loraR=16, targetModules="all", datasetExamples=3000, avgTokensPerExample=768, epochs=2, mfu=0.35),
 ]
 
 def lora_params(hidden, n_layers, r, tgt, kv_dim=None, intermediate=None):
@@ -48,7 +49,7 @@ def compute(m, g, c):
     else:
         ex = lora_params(m.get("hidden"), m.get("n_layers"), r, tgt, m.get("kv_dim"), m.get("intermediate"))
         train = ex if ex is not None else 0.005 * N
-    base_bytes = WEIGHT_NF4 if tuning == "qlora" else WEIGHT_BF16
+    base_bytes = WEIGHT_NF4 if tuning == "qlora" else (WEIGHT_INT8 if tuning == "lora_8bit" else WEIGHT_BF16)
     baseGB = N * base_bytes / 1e9
     per_param = GRAD_BF16 + OPT_STATE.get(opt, 8) + MASTER_FP32
     stateGB = train * per_param / 1e9

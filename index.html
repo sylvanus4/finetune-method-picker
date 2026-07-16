@@ -31,9 +31,11 @@
       <div class="segmented" id="tuning">
         <label><input type="radio" name="tuning" value="full" checked> Full</label>
         <label><input type="radio" name="tuning" value="lora"> LoRA</label>
+        <label><input type="radio" name="tuning" value="lora_8bit"> 8-bit LoRA</label>
         <label><input type="radio" name="tuning" value="qlora"> QLoRA</label>
       </div>
     </label>
+    <div class="dim" style="margin-top:4px">base 메모리: Full·LoRA <b>2</b> · 8-bit LoRA <b>1</b> · QLoRA <b>0.5</b> byte/param. 사전양자화 체크포인트(GPTQ/AWQ/MXFP4·gpt-oss)는 그 위에 LoRA만 얹어 학습합니다.</div>
 
     <label style="margin-top:10px">목표 (objective) <select id="objective"></select></label>
     <div class="model-note" id="objectiveNote"></div>

@@ -29,15 +29,16 @@
       perDeviceBatch: 1, gradAccum: 16, seqLen: 2048, gradCkpt: true, epochs: 2,
       scheduler: "cosine", warmup: 0.03, precision: "bf16", packing: true,
       parallelism: "fsdp", cpuOffload: false, quantType: "nf4", computeDtype: "bfloat16", doubleQuant: true };
-    if (tuning === "full")      { p.optimizer = "adamw";       p.lr = "1e-5"; }   // full: LR ~10x lower
-    else if (tuning === "lora") { p.optimizer = "adamw_8bit";  p.lr = "2e-4"; }
-    else /* qlora */            { p.optimizer = "paged_adamw"; p.lr = "2e-4"; }
+    if (tuning === "full")            { p.optimizer = "adamw";       p.lr = "1e-5"; }   // full: LR ~10x lower
+    else if (tuning === "lora")       { p.optimizer = "adamw_8bit";  p.lr = "2e-4"; }
+    else if (tuning === "lora_8bit")  { p.optimizer = "adamw_8bit";  p.lr = "2e-4"; }   // int8 base + LoRA
+    else /* qlora */                  { p.optimizer = "paged_adamw"; p.lr = "2e-4"; }
     return p;
   }
 
   // Best practice = highest-quality tuning that FITS (full-first), + the hardware that fits it.
   function recommendSetup(model) {
-    for (const tuning of ["full", "lora", "qlora"]) {
+    for (const tuning of ["full", "lora", "lora_8bit", "qlora"]) {
       const ps = presetFor(model, tuning);
       const hw = recommendBestGpu(model, ps);
       if (hw) return Object.assign(ps, hw);
@@ -49,7 +50,7 @@
   function recommendSetupForGpu(model, gpuId) {
     const g = GPUS.find(x => x.id === gpuId);
     if (!g) return recommendSetup(model);
-    for (const tuning of ["full", "lora", "qlora"]) {
+    for (const tuning of ["full", "lora", "lora_8bit", "qlora"]) {
       const ps = presetFor(model, tuning);
       for (const ng of [1, 2, 4, 8, 16, 32, 72]) {
         const r = LLMFT.computeTraining(model, g, Object.assign({}, ps, { numGpus: ng, datasetExamples: 0, _skipMax: true }));
@@ -98,7 +99,7 @@
 
   // Deterministic TRL scaffold from the chosen config (code owns the format).
   function genCommand(model, c, r) {
-    const isLora = c.tuning !== "full", isQ = c.tuning === "qlora";
+    const isLora = c.tuning !== "full", isQ = c.tuning === "qlora", isQ8 = c.tuning === "lora_8bit", quant = isQ || isQ8;
     const trainer = { sft: "SFTTrainer", cpt: "SFTTrainer", dpo: "DPOTrainer", grpo: "GRPOTrainer", gkd: "GKDTrainer" }[c.objective] || "SFTTrainer";
     const cfgName = { sft: "SFTConfig", cpt: "SFTConfig", dpo: "DPOConfig", grpo: "GRPOConfig", gkd: "GKDConfig" }[c.objective] || "SFTConfig";
     // internal optimizer key -> valid HF TrainingArguments optim string (bare "adamw"/"paged_adamw" are invalid)
@@ -107,14 +108,15 @@
     const tmods = c.targetModules === "all" ? "all-linear" : (c.targetModules === "attn_all" ? '"q_proj","k_proj","v_proj","o_proj"' : '"q_proj","v_proj"');
     const modelId = model.hf || model.name;
     let s = "";
-    s += `# pip install trl peft transformers accelerate${isQ ? " bitsandbytes" : ""}\n`;
+    s += `# pip install trl peft transformers accelerate${quant ? " bitsandbytes" : ""}\n`;
     s += `# ${model.name} · ${c.tuning.toUpperCase()} · ${c.objective.toUpperCase()} · ${c.numGpus}x ${(GPUS.find(g=>g.id===$("gpu").value)||{}).name?.split(" (")[0] || "GPU"}\n`;
-    s += `import torch\nfrom transformers import AutoModelForCausalLM${isQ ? ", BitsAndBytesConfig" : ""}\n`;
+    s += `import torch\nfrom transformers import AutoModelForCausalLM${quant ? ", BitsAndBytesConfig" : ""}\n`;
     s += c.objective === "gkd" ? `from trl.experimental.gkd import ${cfgName}, ${trainer}\n` : `from trl import ${cfgName}, ${trainer}\n`;
     if (isLora) s += `from peft import LoraConfig\n`;
     s += `\nMODEL = "${modelId}"\n`;
     if (isQ) s += `bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="${c.quantType}",\n    bnb_4bit_use_double_quant=${c.doubleQuant ? "True" : "False"}, bnb_4bit_compute_dtype=torch.${c.computeDtype})\n`;
-    s += `model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.${isQ ? c.computeDtype : (c.precision === "bf16" ? "bfloat16" : "float16")}${isQ ? ", quantization_config=bnb" : ""})\n`;
+    else if (isQ8) s += `bnb = BitsAndBytesConfig(load_in_8bit=True)  # int8 base (8-bit LoRA)\n`;
+    s += `model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.${quant ? c.computeDtype : (c.precision === "bf16" ? "bfloat16" : "float16")}${quant ? ", quantization_config=bnb" : ""})\n`;
     if (isLora) s += `peft_config = LoraConfig(r=${c.loraR}, lora_alpha=${c.loraAlpha}, lora_dropout=${c.loraDropout},\n    target_modules=${c.targetModules === "all" ? '"all-linear"' : "[" + tmods + "]"}, task_type="CAUSAL_LM")\n`;
     s += `\nargs = ${cfgName}(\n`;
     s += `    per_device_train_batch_size=${c.perDeviceBatch}, gradient_accumulation_steps=${c.gradAccum},\n`;

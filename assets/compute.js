@@ -8,6 +8,7 @@
   // precision ≈ 16 B/param = 2 (bf16 weight) + 2 (bf16 grad) + 4+4 (fp32 Adam m,v) + 4 (fp32 master).
   const WEIGHT_BF16 = 2;            // frozen/base weight in bf16
   const WEIGHT_NF4  = 0.5;          // QLoRA 4-bit NF4 base (arXiv:2305.14314); +doublequant ~0.03 ignored
+  const WEIGHT_INT8 = 1;            // 8-bit LoRA base (bitsandbytes load_in_8bit) — int8, 1 byte/param
   const GRAD_BF16   = 2;            // gradient, per TRAINABLE param
   const MASTER_FP32 = 4;            // fp32 master copy, per trainable param
   const OPT_STATE = { adamw: 8, adamw_8bit: 2, paged_adamw: 8 }; // Adam m+v; 8-bit optim = 1B each (bitsandbytes)
@@ -71,7 +72,7 @@
     const trainablePct = (trainableParams / N) * 100;
 
     // --- VRAM components (GB) ---
-    const baseBytes = tuning === "qlora" ? WEIGHT_NF4 : WEIGHT_BF16;
+    const baseBytes = tuning === "qlora" ? WEIGHT_NF4 : (tuning === "lora_8bit" ? WEIGHT_INT8 : WEIGHT_BF16);
     const baseGB = (N * baseBytes) / 1e9;
     const optBytes = OPT_STATE[optimizer] != null ? OPT_STATE[optimizer] : OPT_STATE.adamw;
     const trainPerParam = GRAD_BF16 + optBytes + MASTER_FP32;     // per trainable param
@@ -96,7 +97,8 @@
     const oomFixes = [];
     if (!fits) {
       if (tuning === "full") oomFixes.push("full → LoRA/QLoRA (base 동결로 학습 상태 급감)");
-      if (tuning === "lora") oomFixes.push("LoRA → QLoRA (base를 4-bit NF4로)");
+      if (tuning === "lora") oomFixes.push("LoRA → 8-bit LoRA(int8) 또는 QLoRA(4-bit NF4)로 base 압축");
+      if (tuning === "lora_8bit") oomFixes.push("8-bit LoRA → QLoRA (base를 4-bit NF4로 더 압축)");
       if (!gradCkpt) oomFixes.push("gradient checkpointing 켜기 (액티베이션 ~5x↓, ~30% 느려짐)");
       if (perDeviceBatch > 1) oomFixes.push("per-device 배치를 1로, grad_accum↑로 effective batch 유지");
       if (seqLen > 1024) oomFixes.push("max_seq_len 낮추기 (액티베이션 선형↓)");

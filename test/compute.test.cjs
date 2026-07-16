@@ -26,8 +26,10 @@ ok("full base = 2 B/param", computeTraining(q8, h100, { ...base, tuning: "full" 
 const vFull = computeTraining(q8, h100, { ...base, tuning: "full" }).perGpuVramGB;
 const vLora = computeTraining(q8, h100, { ...base, tuning: "lora" }).perGpuVramGB;
 const vQ = computeTraining(q8, h100, { ...base, tuning: "qlora" }).perGpuVramGB;
+const v8 = computeTraining(q8, h100, { ...base, tuning: "lora_8bit" }).perGpuVramGB;
 ok("VRAM: full > lora", vFull > vLora);
-ok("VRAM: lora > qlora", vLora > vQ);
+ok("VRAM: lora > 8-bit lora > qlora", vLora > v8 && v8 > vQ);
+ok("8-bit lora base = 1 B/param", computeTraining(q8, h100, { ...base, tuning: "lora_8bit" }).baseBytes === 1);
 
 // 3. LoRA trainable << full
 const rLora = computeTraining(q8, h100, { ...base, tuning: "lora", loraR: 16 });
