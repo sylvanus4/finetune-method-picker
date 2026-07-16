@@ -1,5 +1,7 @@
 # finetune-method-picker
 
+**[English](README.en.md)** · 한국어 · 웹 UI는 우측 상단에서 EN/KR 전환
+
 **내 GPU로 이 모델을 어떻게 파인튜닝하지?** — GPU·모델·기법을 넣으면 학습 VRAM, 최대 학습 가능 모델 크기, 데이터 포맷, 데이터량, 학습 시간·비용을 **공식과 함께** 계산하는 정적 웹 도구.
 
 100% 브라우저에서 동작합니다. 서버·API 키·데이터 전송이 전혀 없어요. 계산 로직은 전부 클라이언트 JavaScript고, **숫자마다 "공식 보기"로 근거와 대입값을 펼칠 수 있습니다.** MIT.
@@ -8,14 +10,15 @@
 
 ## 무엇을 답해주나
 
+- **데이터셋 + 모델만 고르면 best 자동** — 실제 HF 데이터셋(2026 의미있는 케이스)을 고르면 objective·예시수·평균토큰이 채워지고, 모델을 고르면 **Full 우선**으로 맞는 최소 하드웨어+설정이 자동 셋팅(안 맞으면 LoRA→8-bit→QLoRA 자동 강등). GPU를 바꾸면 그 카드 기준으로 재계산.
 - **OOM 디버거** — batch / seq_len / grad accum / gradient checkpointing / optimizer를 돌리며 GPU당 VRAM을 실시간으로 보고, 안 들어가면 구체적 처방을 제시
-- **기법 선택** — LoRA vs QLoRA vs full, 그리고 SFT / CPT / DPO / GRPO / GKD 목표별 추천
-- **최대 학습 가능 모델** — 이 GPU 세트·기법·배치에서 학습 가능한 최대 파라미터 크기 역산
-- **effective batch** = per-device × grad accum × GPU 수 (초심자가 가장 많이 놓치는 값)
-- **LoRA 도우미** — rank r → 학습 파라미터 수, α≈2r, target modules
-- **데이터 포맷·데이터량** — 기법별 정답 포맷(chat template 실수 포함) + 목표별 데이터량 heuristic
+- **튜닝 방식별 완전 config** — Full(FSDP/ZeRO-3/DDP·CPU offload) · LoRA(r/alpha/dropout/target) · 8-bit LoRA(int8 base) · QLoRA(NF4/double-quant/compute dtype) + LR·스케줄러·warmup·packing
+- **실행 가능한 TRL 스캐폴드** — 선택값을 채운 복붙 Python 코드(objective별 trainer + LoraConfig/BitsAndBytesConfig + FSDP/DeepSpeed 런치)
+- **2026 태스크 가이드** — "회사 UI 코드 학습" 같은 작업별 방법·데이터량·베이스 모델 + **파인튜닝을 애초에 할 가치가 있나** 게이트(3갈래 시장·5조건·먼저 RAG 의심)
+- **최대 학습 가능 모델** / **effective batch** = per-device × grad accum × GPU 수 / optimizer step 수
+- **LoRA 도우미** — rank r → 학습 파라미터 수(GQA/MLA-aware), α≈2r, target modules
 - **학습 시간·비용** — C≈6ND ÷ (FLOPS × MFU), 임대 비용
-- **큰 모델 → 데이터 추출(증류)** 가이드 + 2026 최근 기법 셸프(성숙도 라벨)
+- **EN/KR 이중언어** — 우측 상단 토글로 화면 전체가 실제 언어로 렌더
 
 ## 공식 (전부 화면 "공식 보기"에서 확인 가능)
 

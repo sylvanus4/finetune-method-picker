@@ -94,17 +94,18 @@
     const effectiveBatch = perDeviceBatch * gradAccum * numGpus;
 
     // --- OOM fixes (only when it doesn't fit) ---
+    // oomFixes are i18n KEYS (rendered/localized by the UI, not text — keeps compute.js language-free)
     const oomFixes = [];
     if (!fits) {
-      if (tuning === "full") oomFixes.push("full → LoRA/QLoRA (base 동결로 학습 상태 급감)");
-      if (tuning === "lora") oomFixes.push("LoRA → 8-bit LoRA(int8) 또는 QLoRA(4-bit NF4)로 base 압축");
-      if (tuning === "lora_8bit") oomFixes.push("8-bit LoRA → QLoRA (base를 4-bit NF4로 더 압축)");
-      if (!gradCkpt) oomFixes.push("gradient checkpointing 켜기 (액티베이션 ~5x↓, ~30% 느려짐)");
-      if (perDeviceBatch > 1) oomFixes.push("per-device 배치를 1로, grad_accum↑로 effective batch 유지");
-      if (seqLen > 1024) oomFixes.push("max_seq_len 낮추기 (액티베이션 선형↓)");
-      if (optimizer === "adamw") oomFixes.push("8-bit 또는 paged optimizer로 옵티마이저 상태↓");
-      if (strategy === "ddp" && numGpus > 1) oomFixes.push("DDP → FSDP (base+상태 샤딩)");
-      oomFixes.push("GPU 수 늘리기 (FSDP 샤딩)");
+      if (tuning === "full") oomFixes.push("fix_full_lora");
+      if (tuning === "lora") oomFixes.push("fix_lora_8bit");
+      if (tuning === "lora_8bit") oomFixes.push("fix_8bit_qlora");
+      if (!gradCkpt) oomFixes.push("fix_gradckpt");
+      if (perDeviceBatch > 1) oomFixes.push("fix_batch1");
+      if (seqLen > 1024) oomFixes.push("fix_seq");
+      if (optimizer === "adamw") oomFixes.push("fix_optim");
+      if (strategy === "ddp" && numGpus > 1) oomFixes.push("fix_fsdp");
+      oomFixes.push("fix_gpus");
     }
 
     // --- max trainable model size on this setup (skipped in the recursive search to avoid infinite loop) ---
@@ -128,12 +129,13 @@
     }
 
     // --- overfitting heuristic (eval divergence isn't pre-computable; flag risky configs) ---
+    // overfitFlags = {k: i18n key, p: params} — localized by the UI.
     const overfitFlags = [];
-    if (epochs > 3) overfitFlags.push(epochs + " epochs — SFT는 보통 1–3 (반복=과적합·품질저하, Raschka)");
+    if (epochs > 3) overfitFlags.push({ k: "of_epochs", p: { n: epochs } });
     if (datasetExamples > 0 && datasetExamples < 500 && tuning === "full")
-      overfitFlags.push("작은 데이터(<500) + full FT → 과적합·망각 위험, LoRA 권장");
+      overfitFlags.push({ k: "of_smallfull", p: {} });
     if (datasetExamples > 0 && datasetExamples < 100)
-      overfitFlags.push("데이터 <100 — 대부분 목표에 부족(heuristic)");
+      overfitFlags.push({ k: "of_tiny", p: {} });
 
     const lora = (tuning !== "full") ? { r, recommendedAlpha: 2 * r, trainableParams, trainablePct, targetModules } : null;
 

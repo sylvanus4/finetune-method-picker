@@ -2,18 +2,146 @@
   "_note": "Recent (2026 Q2) post-training techniques shelf. Maturity is honest: LoRA/QLoRA/GRPO/DPO/on-policy-distillation are the ESTABLISHED core (default recommendations). The 2026 items below are mostly single-paper/experimental — shown as an 'explore' shelf, NOT as defaults. Every entry has a real URL. Headline truth: nothing displaced LoRA/QLoRA in the last 3 months; the real 2026 change is engineering maturity (TRL v1.0) and distillation pipelining.",
   "_updated": "2026-07-15",
   "established": [
-    {"name": "LoRA / QLoRA", "note": "PEFT 기본값, 불변", "url": "https://huggingface.co/docs/peft"},
-    {"name": "DPO", "note": "선호 정렬 표준", "url": "https://arxiv.org/abs/2305.18290"},
-    {"name": "GRPO / DAPO / GSPO / RLVR", "note": "검증가능 보상 RL 표준 스택", "url": "https://www.turingpost.com/p/reasoning-rl-in-2026"},
-    {"name": "TRL v1.0", "note": "2026-03, 75+ trainer 프로덕션 API — 알고리즘 아닌 성숙", "url": "https://huggingface.co/blog/trl-v1"}
+    {
+      "name": "LoRA / QLoRA",
+      "note": "PEFT 기본값, 불변",
+      "url": "https://huggingface.co/docs/peft"
+    },
+    {
+      "name": "DPO",
+      "note": "선호 정렬 표준",
+      "url": "https://arxiv.org/abs/2305.18290"
+    },
+    {
+      "name": "GRPO / DAPO / GSPO / RLVR",
+      "note": "검증가능 보상 RL 표준 스택",
+      "url": "https://www.turingpost.com/p/reasoning-rl-in-2026"
+    },
+    {
+      "name": "TRL v1.0",
+      "note": "2026-03, 75+ trainer 프로덕션 API — 알고리즘 아닌 성숙",
+      "url": "https://huggingface.co/blog/trl-v1"
+    }
   ],
   "emerging_2026": [
-    {"name": "On-policy distillation", "date": "2026 wave", "maturity": "프로덕션화 중", "what": "student rollout + live teacher 교정, full RL보다 싸고 exposure-bias 해소", "when": "강한 teacher + 싸고 빠른 student", "url": "https://thinkingmachines.ai/blog/on-policy-distillation"},
-    {"name": "TRL DistillationTrainer", "date": "2026", "maturity": "실험 API", "what": "generation buffer(최대 40x)·외부 teacher 서버·binary logprob — prompts만으로 live 증류", "when": "증류 파이프라인 가속", "url": "https://huggingface.co/docs/trl/distillation_trainer"},
-    {"name": "MatryoshkaLoRA", "date": "2026-05", "maturity": "단일논문(실험적)", "what": "한 어댑터가 여러 sub-rank 제공 → 재학습 없이 추론 시 rank 선택", "when": "여러 품질/비용 지점 배포", "url": "https://arxiv.org/abs/2605.07850"},
-    {"name": "IGU-LoRA", "date": "2026-03", "maturity": "단일논문(실험적)", "what": "층별 적응 rank(Integrated Gradients+불확실성) — 균일 rank보다 우수", "when": "고정 예산에서 rank 자동 배분", "url": "https://arxiv.org/abs/2603.13792"},
-    {"name": "Dynamic-pruning GRPO", "date": "2026-03", "maturity": "단일논문(실험적)", "what": "저가치 rollout을 RL 중 가지치기(importance-sampling 보정)", "when": "rollout 생성이 병목일 때", "url": "https://arxiv.org/abs/2603.04135"},
-    {"name": "LongAct", "date": "2026-04", "maturity": "단일논문(실험적)", "what": "장문맥 추론 RL을 activation 패턴으로(RoPE 스케일링 너머)", "when": "장문맥 추론 모델 학습", "url": "https://arxiv.org/pdf/2604.14922"},
-    {"name": "LongAttnComp", "date": "2026-06", "maturity": "단일논문(실험적)", "what": "2단계 FT로 context 압축기 학습(NIAH→멀티홉)", "when": "추론 모델에 넣는 유효 context 축소", "url": "https://arxiv.org/abs/2606.01336"}
+    {
+      "name": "On-policy distillation",
+      "date": "2026 wave",
+      "maturity": {
+        "ko": "프로덕션화 중",
+        "en": "productionizing"
+      },
+      "what": {
+        "ko": "student rollout + live teacher 교정, full RL보다 싸고 exposure-bias 해소",
+        "en": "student rollout + live teacher correction; cheaper than full RL, fixes exposure bias"
+      },
+      "when": {
+        "ko": "강한 teacher + 싸고 빠른 student",
+        "en": "strong teacher + cheap fast student"
+      },
+      "url": "https://thinkingmachines.ai/blog/on-policy-distillation"
+    },
+    {
+      "name": "TRL DistillationTrainer",
+      "date": "2026",
+      "maturity": {
+        "ko": "실험 API",
+        "en": "experimental API"
+      },
+      "what": {
+        "ko": "generation buffer(최대 40x)·외부 teacher 서버·binary logprob — prompts만으로 live 증류",
+        "en": "generation buffer (up to 40x) · external teacher server · binary logprob — live distill from prompts only"
+      },
+      "when": {
+        "ko": "증류 파이프라인 가속",
+        "en": "accelerate distillation pipeline"
+      },
+      "url": "https://huggingface.co/docs/trl/distillation_trainer"
+    },
+    {
+      "name": "MatryoshkaLoRA",
+      "date": "2026-05",
+      "maturity": {
+        "ko": "단일논문(실험적)",
+        "en": "single-paper (experimental)"
+      },
+      "what": {
+        "ko": "한 어댑터가 여러 sub-rank 제공 → 재학습 없이 추론 시 rank 선택",
+        "en": "one adapter serves multiple sub-ranks → pick rank at inference, no retrain"
+      },
+      "when": {
+        "ko": "여러 품질/비용 지점 배포",
+        "en": "deploy multiple quality/cost points"
+      },
+      "url": "https://arxiv.org/abs/2605.07850"
+    },
+    {
+      "name": "IGU-LoRA",
+      "date": "2026-03",
+      "maturity": {
+        "ko": "단일논문(실험적)",
+        "en": "single-paper (experimental)"
+      },
+      "what": {
+        "ko": "층별 적응 rank(Integrated Gradients+불확실성) — 균일 rank보다 우수",
+        "en": "per-layer adaptive rank (Integrated Gradients + uncertainty) — beats uniform rank"
+      },
+      "when": {
+        "ko": "고정 예산에서 rank 자동 배분",
+        "en": "auto-allocate rank under a fixed budget"
+      },
+      "url": "https://arxiv.org/abs/2603.13792"
+    },
+    {
+      "name": "Dynamic-pruning GRPO",
+      "date": "2026-03",
+      "maturity": {
+        "ko": "단일논문(실험적)",
+        "en": "single-paper (experimental)"
+      },
+      "what": {
+        "ko": "저가치 rollout을 RL 중 가지치기(importance-sampling 보정)",
+        "en": "prune low-value rollouts during RL (importance-sampling corrected)"
+      },
+      "when": {
+        "ko": "rollout 생성이 병목일 때",
+        "en": "when rollout generation is the bottleneck"
+      },
+      "url": "https://arxiv.org/abs/2603.04135"
+    },
+    {
+      "name": "LongAct",
+      "date": "2026-04",
+      "maturity": {
+        "ko": "단일논문(실험적)",
+        "en": "single-paper (experimental)"
+      },
+      "what": {
+        "ko": "장문맥 추론 RL을 activation 패턴으로(RoPE 스케일링 너머)",
+        "en": "long-context reasoning RL via activation patterns (beyond RoPE scaling)"
+      },
+      "when": {
+        "ko": "장문맥 추론 모델 학습",
+        "en": "train long-context reasoning models"
+      },
+      "url": "https://arxiv.org/pdf/2604.14922"
+    },
+    {
+      "name": "LongAttnComp",
+      "date": "2026-06",
+      "maturity": {
+        "ko": "단일논문(실험적)",
+        "en": "single-paper (experimental)"
+      },
+      "what": {
+        "ko": "2단계 FT로 context 압축기 학습(NIAH→멀티홉)",
+        "en": "two-stage FT trains a context compressor (NIAH → multi-hop)"
+      },
+      "when": {
+        "ko": "추론 모델에 넣는 유효 context 축소",
+        "en": "shrink effective context fed to reasoning models"
+      },
+      "url": "https://arxiv.org/abs/2606.01336"
+    }
   ]
 }

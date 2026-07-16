@@ -2,85 +2,313 @@
   "_note": "태스크 -> 데이터량 -> 방법 실전 가이드 + '파인튜닝을 애초에 할 가치가 있나' 게이트. 2026 파인튜닝 시장 재편(3갈래)과 '확실히 이기는 5조건'을 반영. 원칙: 오픈도메인 추론/최신지식/롱테일은 파인튜닝이 프론티어를 못 이긴다 -> 그 영역은 프론티어+RAG/스킬에 양보(정직). 수치는 검증된 것만 인용하고 미검증 factoid는 배제한다. 데이터량은 heuristic 라벨.",
   "_updated": "2026-07-16",
   "marketShift": {
-    "headline": "2026년 파인튜닝 시장은 죽느냐 사느냐가 아니라 세 갈래로 갈라졌다. 아무 태스크나 튜닝하던 시대는 끝났고, '의미 있는 파인튜닝'만 남는다.",
+    "headline": {
+      "ko": "2026년 파인튜닝 시장은 죽느냐 사느냐가 아니라 세 갈래로 갈라졌다. 아무 태스크나 튜닝하던 시대는 끝났고, '의미 있는 파인튜닝'만 남는다.",
+      "en": "In 2026 the fine-tuning market didn't split into live-or-die — it split three ways. Tuning any task is over; only 'meaningful fine-tuning' remains."
+    },
     "tracks": [
-      {"id": "shrink", "name": "갈래 1 · 셀프서브 SFT API (축소)", "what": "프론티어 모델의 긴 컨텍스트·네이티브 툴콜·구조화 출력이 과거 파인튜닝의 존재이유(포맷 준수·도메인 어휘)를 상당 부분 흡수. OpenAI는 셀프서브 파인튜닝을 단계적 폐쇄(2026-05-07 발표, 신규 조직 중단; 기존 고객 잡 생성은 2027-01-06까지). 사유: 'GPT-5.5가 지시·포맷을 훨씬 잘 따라 프롬프트가 더 싸고 빠르다'.", "src": "https://developers.openai.com/api/docs/deprecations"},
-      {"id": "sovereign", "name": "갈래 2 · 소유형 소버린 커스텀 모델 (프리미엄화)", "what": "API로 가볍게 튜닝하는 시대는 저물지만, 기업이 모델을 소유·통제하는 무거운 커스터마이징은 몸값이 오른다. 에어갭·규제·데이터 주권 수요. 프론티어 API 자체가 공급 리스크가 된 사건이 방증: Anthropic Claude Fable 5·Mythos 5가 美 수출통제로 19일(2026-06-12~30) 글로벌 중단.", "src": "https://www.anthropic.com/news/fable-mythos-access"},
-      {"id": "rl-worker", "name": "갈래 3 · RL 파인튜닝 + 워커 경제학 (신규 성장)", "what": "에이전트 시대의 신규 수요. 오케스트레이터가 좋아질수록 반복 서브태스크를 담당할 저비용 워커 호출량이 늘고, 슬롯마다 프론티어를 부르면 비용이 감당 안 됨. 검증가능 보상(GRPO/RFT)은 별도 트랙으로 남음(OpenAI가 SFT를 접으며 RFT는 유지).", "src": "https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning"}
+      {
+        "id": "shrink",
+        "name": {
+          "ko": "갈래 1 · 셀프서브 SFT API (축소)",
+          "en": "Track 1 · self-serve SFT API (shrinking)"
+        },
+        "what": {
+          "ko": "프론티어 모델의 긴 컨텍스트·네이티브 툴콜·구조화 출력이 과거 파인튜닝의 존재이유(포맷 준수·도메인 어휘)를 상당 부분 흡수. OpenAI는 셀프서브 파인튜닝을 단계적 폐쇄(2026-05-07 발표, 신규 조직 중단; 기존 고객 잡 생성은 2027-01-06까지). 사유: 'GPT-5.5가 지시·포맷을 훨씬 잘 따라 프롬프트가 더 싸고 빠르다'.",
+          "en": "Frontier models' long context, native tool-calling and structured output absorbed much of fine-tuning's old reason to exist (format compliance, domain vocab). OpenAI is winding down self-serve fine-tuning (announced 2026-05-07, no new orgs; existing customers can create jobs until 2027-01-06). Reason: 'GPT-5.5 follows instructions and formats far better, so prompting is cheaper and faster.'"
+        },
+        "src": "https://developers.openai.com/api/docs/deprecations"
+      },
+      {
+        "id": "sovereign",
+        "name": {
+          "ko": "갈래 2 · 소유형 소버린 커스텀 모델 (프리미엄화)",
+          "en": "Track 2 · owned sovereign custom models (premiumizing)"
+        },
+        "what": {
+          "ko": "API로 가볍게 튜닝하는 시대는 저물지만, 기업이 모델을 소유·통제하는 무거운 커스터마이징은 몸값이 오른다. 에어갭·규제·데이터 주권 수요. 프론티어 API 자체가 공급 리스크가 된 사건이 방증: Anthropic Claude Fable 5·Mythos 5가 美 수출통제로 19일(2026-06-12~30) 글로벌 중단.",
+          "en": "Light API tuning is fading, but heavy customization where a company owns and controls the model is gaining value — air-gapped, regulated, data-sovereignty demand. A frontier API becoming a supply risk proves it: Anthropic's Claude Fable 5 and Mythos 5 were pulled globally for 19 days (2026-06-12 to 30) under a US export-control order."
+        },
+        "src": "https://www.anthropic.com/news/fable-mythos-access"
+      },
+      {
+        "id": "rl-worker",
+        "name": {
+          "ko": "갈래 3 · RL 파인튜닝 + 워커 경제학 (신규 성장)",
+          "en": "Track 3 · RL fine-tuning + worker economics (new growth)"
+        },
+        "what": {
+          "ko": "에이전트 시대의 신규 수요. 오케스트레이터가 좋아질수록 반복 서브태스크를 담당할 저비용 워커 호출량이 늘고, 슬롯마다 프론티어를 부르면 비용이 감당 안 됨. 검증가능 보상(GRPO/RFT)은 별도 트랙으로 남음(OpenAI가 SFT를 접으며 RFT는 유지).",
+          "en": "New demand from the agent era. As orchestrators improve, calls to cheap workers handling repetitive sub-tasks grow, and calling frontier per slot is unaffordable. Verifiable-reward RL (GRPO/RFT) stays a separate track (OpenAI kept RFT while retiring SFT)."
+        },
+        "src": "https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning"
+      }
     ]
   },
   "whenToFineTune": {
     "winConditions": [
-      {"cond": "좁고 반복적 + 출력 포맷 고정", "detail": "분류·검증·구조화 추출. 소량 정예 데이터로도 우위. (LIMA: 1,000개 정예로 정렬 가능 존재증명 — 만능 아님)", "src": "https://arxiv.org/abs/2305.11206"},
-      {"cond": "검증 가능한 보상이 존재", "detail": "코드가 테스트 통과·수학 정답 등 환경 피드백 -> GRPO/RFT가 지도학습보다 유리. OpenAI가 SFT를 접으며 RFT만 남긴 이유.", "src": "https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning"},
-      {"cond": "호출 빈도 높고 비용·지연이 지배 제약", "detail": "에이전트 워커 슬롯. 커스텀 소형 FT 모델이 프론티어 대비 추론당 비용을 크게 낮춘 사례(Thinking Machines Lab 금융 태스크: 정확도 78.2%→84.7% + 추론당 13.8배 저비용).", "src": "https://thinkingmachines.ai/news/learning-to-replicate-expert-judgment-in-financial-tasks/"},
-      {"cond": "데이터 주권·규제·폐쇄망 요구", "detail": "공공·금융·방산은 애초에 외부 API 선택지가 제한. 소유형 모델이 유일 경로.", "src": ""},
-      {"cond": "프론티어 API 자체가 공급 리스크", "detail": "수출통제·정책변경은 가상 시나리오가 아님(Fable 5·Mythos 5 19일 셧다운).", "src": "https://www.anthropic.com/news/fable-mythos-access"}
+      {
+        "cond": {
+          "ko": "좁고 반복적 + 출력 포맷 고정",
+          "en": "narrow + repetitive + fixed output format"
+        },
+        "detail": {
+          "ko": "분류·검증·구조화 추출. 소량 정예 데이터로도 우위. (LIMA: 1,000개 정예로 정렬 가능 존재증명 — 만능 아님)",
+          "en": "classify, verify, structured extraction. A small curated set can win. (LIMA: 1,000 curated examples enough to align — existence proof, not universal.)"
+        },
+        "src": "https://arxiv.org/abs/2305.11206"
+      },
+      {
+        "cond": {
+          "ko": "검증 가능한 보상이 존재",
+          "en": "a verifiable reward exists"
+        },
+        "detail": {
+          "ko": "코드가 테스트 통과·수학 정답 등 환경 피드백 -> GRPO/RFT가 지도학습보다 유리. OpenAI가 SFT를 접으며 RFT만 남긴 이유.",
+          "en": "environment feedback like code passing tests or correct math → GRPO/RFT beats supervised. Why OpenAI kept RFT while retiring SFT."
+        },
+        "src": "https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning"
+      },
+      {
+        "cond": {
+          "ko": "호출 빈도 높고 비용·지연이 지배 제약",
+          "en": "high call frequency, cost/latency dominate"
+        },
+        "detail": {
+          "ko": "에이전트 워커 슬롯. 커스텀 소형 FT 모델이 프론티어 대비 추론당 비용을 크게 낮춘 사례(Thinking Machines Lab 금융 태스크: 정확도 78.2%→84.7% + 추론당 13.8배 저비용).",
+          "en": "agent worker slots. A custom small FT model cut cost-per-inference vs frontier a lot (Thinking Machines Lab finance task: accuracy 78.2%→84.7% + 13.8x cheaper per inference)."
+        },
+        "src": "https://thinkingmachines.ai/news/learning-to-replicate-expert-judgment-in-financial-tasks/"
+      },
+      {
+        "cond": {
+          "ko": "데이터 주권·규제·폐쇄망 요구",
+          "en": "data sovereignty / regulated / air-gapped"
+        },
+        "detail": {
+          "ko": "공공·금융·방산은 애초에 외부 API 선택지가 제한. 소유형 모델이 유일 경로.",
+          "en": "public sector, finance, defense have limited external-API options to begin with. An owned model is the only path."
+        },
+        "src": ""
+      },
+      {
+        "cond": {
+          "ko": "프론티어 API 자체가 공급 리스크",
+          "en": "the frontier API itself is a supply risk"
+        },
+        "detail": {
+          "ko": "수출통제·정책변경은 가상 시나리오가 아님(Fable 5·Mythos 5 19일 셧다운).",
+          "en": "export controls and policy changes aren't hypothetical (Fable 5·Mythos 5 19-day shutdown)."
+        },
+        "src": "https://www.anthropic.com/news/fable-mythos-access"
+      }
     ],
-    "deferToFrontier": "오픈도메인 추론, 최신 지식, 롱테일 처리에서 파인튜닝 모델이 프론티어를 이겼다는 근거는 이번 윈도우에 없음. 그 영역은 스킬·프론티어+RAG에 양보하는 것이 정직한 판단.",
-    "firstAskRAG": "포맷 준수·브랜드 보이스·회사 컨벤션의 상당 부분은 이제 강한 모델 + 긴 컨텍스트 + 시스템 프롬프트 + 소수 골든 예시(RAG)로 학습 없이 80~90% 도달. 파인튜닝은 (a)호출량이 커 RAG 컨텍스트 비용·지연이 지배, (b)온프렘/주권, (c)컨벤션이 너무 커 컨텍스트에 안 들어갈 때 이긴다."
+    "deferToFrontier": {
+      "ko": "오픈도메인 추론, 최신 지식, 롱테일 처리에서 파인튜닝 모델이 프론티어를 이겼다는 근거는 이번 윈도우에 없음. 그 영역은 스킬·프론티어+RAG에 양보하는 것이 정직한 판단.",
+      "en": "No evidence in this window that a fine-tuned model beat frontier on open-domain reasoning, latest knowledge, or long-tail. The honest call is to defer those to skills + frontier+RAG."
+    },
+    "firstAskRAG": {
+      "ko": "포맷 준수·브랜드 보이스·회사 컨벤션의 상당 부분은 이제 강한 모델 + 긴 컨텍스트 + 시스템 프롬프트 + 소수 골든 예시(RAG)로 학습 없이 80~90% 도달. 파인튜닝은 (a)호출량이 커 RAG 컨텍스트 비용·지연이 지배, (b)온프렘/주권, (c)컨벤션이 너무 커 컨텍스트에 안 들어갈 때 이긴다.",
+      "en": "Much format compliance, brand voice, and house conventions now reach 80–90% with a strong model + long context + system prompt + a few golden examples (RAG), no training. Fine-tuning wins when (a) call volume makes RAG context cost/latency dominate, (b) on-prem/sovereignty, or (c) the conventions are too large to fit the context window."
+    }
   },
   "recipes": [
     {
       "id": "house-code",
-      "task": "회사 고유 UI/코드 컨벤션 학습 (예: 우리 UI 컴포넌트 라이브러리·하우스 스타일로 코드 생성)",
-      "objective": "cpt", "objectiveThen": "sft",
-      "tuning": "qlora", "loraR": 32, "epochs": 2,
-      "dataKey": "cpt_repo", "dataRange": "CPT 코퍼스 = 사내 repo+컴포넌트 문서 20~50M 토큰(1~2ep), 이후 SFT 1,000~1,500 정예 (지시->하우스스타일 코드) 쌍",
-      "base": "Qwen3-Coder / Devstral 계열 코드 모델(중형이 스타일 전이 빠름)",
-      "honesty": "먼저 RAG를 시도하라: 강한 코드 모델 + 긴 컨텍스트에 컴포넌트 문서·골든 예시 수십 개 + 좋은 시스템 프롬프트면 '우리 컨벤션'의 80~90%는 학습 없이 달성. 파인튜닝이 이기는 건 호출량이 커 RAG 비용/지연이 지배하거나, 온프렘/주권이거나, 컨벤션이 컨텍스트에 안 들어갈 만큼 방대·특이할 때. 커밋한다면 CPT(코드베이스) -> SFT(정예쌍) 순서가 SFT 단독보다 빠르게 수렴.",
-      "verdict": "조건부 — RAG 우선, 스케일/주권이면 FT",
-      "note": "heuristic (2025-26 Unsloth/Axolotl 실무 기준). 검증: 홀드아웃 repo diff + 린터/스타일체커를 자동 게이트로."
+      "task": {
+        "ko": "회사 고유 UI/코드 컨벤션 학습 (예: 우리 UI 컴포넌트 라이브러리·하우스 스타일로 코드 생성)",
+        "en": "Learn house UI/code conventions (e.g. generate code in our component library / house style)"
+      },
+      "objective": "cpt",
+      "objectiveThen": "sft",
+      "tuning": "qlora",
+      "loraR": 32,
+      "epochs": 2,
+      "dataKey": "cpt_repo",
+      "dataRange": {
+        "ko": "CPT 코퍼스 = 사내 repo+컴포넌트 문서 20~50M 토큰(1~2ep), 이후 SFT 1,000~1,500 정예 (지시->하우스스타일 코드) 쌍",
+        "en": "CPT corpus = internal repos + component docs, 20–50M tokens (1–2 ep), then SFT on 1,000–1,500 curated (instruction→house-style code) pairs"
+      },
+      "base": {
+        "ko": "Qwen3-Coder / Devstral 계열 코드 모델(중형이 스타일 전이 빠름)",
+        "en": "Qwen3-Coder / Devstral code models (mid-size transfers style faster)"
+      },
+      "honesty": {
+        "ko": "먼저 RAG를 시도하라: 강한 코드 모델 + 긴 컨텍스트에 컴포넌트 문서·골든 예시 수십 개 + 좋은 시스템 프롬프트면 '우리 컨벤션'의 80~90%는 학습 없이 달성. 파인튜닝이 이기는 건 호출량이 커 RAG 비용/지연이 지배하거나, 온프렘/주권이거나, 컨벤션이 컨텍스트에 안 들어갈 만큼 방대·특이할 때. 커밋한다면 CPT(코드베이스) -> SFT(정예쌍) 순서가 SFT 단독보다 빠르게 수렴.",
+        "en": "Try RAG first: a strong code model + long context with component docs, a few dozen golden examples, and a good system prompt reaches 80–90% of 'our conventions' without training. Fine-tuning wins when call volume makes RAG cost/latency dominate, when on-prem/sovereignty is required, or when the conventions are too large/idiosyncratic to fit the context. If you commit, CPT (codebase) → SFT (curated pairs) converges faster than SFT alone."
+      },
+      "verdict": {
+        "ko": "조건부 — RAG 우선, 스케일/주권이면 FT",
+        "en": "Conditional — RAG first, FT if scale/sovereignty"
+      },
+      "note": {
+        "ko": "heuristic (2025-26 Unsloth/Axolotl 실무 기준). 검증: 홀드아웃 repo diff + 린터/스타일체커를 자동 게이트로.",
+        "en": "heuristic (2025-26 Unsloth/Axolotl practice). Validate with held-out repo diffs + a linter/style checker as an automated gate."
+      }
     },
     {
       "id": "extraction",
-      "task": "구조화 추출 / 분류 (고정 스키마, 좁은 태스크)",
-      "objective": "sft", "tuning": "lora", "loraR": 16, "epochs": 3,
-      "dataKey": "narrow", "dataRange": "200~1,000 라벨 예시 (출력공간이 좁아 생성보다 적게)",
-      "base": "소·중형(Qwen3-4B/8B, Llama-3.1-8B) — 프론티어 추론 불필요",
-      "honesty": "종종 파인튜닝이 첫 수가 아님 — 프론티어 JSON/structured-output + few-shot 먼저. 규모에서 비용/지연 절감이나 온프렘이 필요할 때 튜닝(좁은 분류는 싼 소형 FT가 단위경제로 확실히 이기는 대표 케이스).",
-      "verdict": "이기기 쉬움 (스케일 시)",
-      "note": "heuristic"
+      "task": {
+        "ko": "구조화 추출 / 분류 (고정 스키마, 좁은 태스크)",
+        "en": "Structured extraction / classification (fixed schema, narrow task)"
+      },
+      "objective": "sft",
+      "tuning": "lora",
+      "loraR": 16,
+      "epochs": 3,
+      "dataKey": "narrow",
+      "dataRange": {
+        "ko": "200~1,000 라벨 예시 (출력공간이 좁아 생성보다 적게)",
+        "en": "200–1,000 labeled examples (fewer than free-form since the output space is narrow)"
+      },
+      "base": {
+        "ko": "소·중형(Qwen3-4B/8B, Llama-3.1-8B) — 프론티어 추론 불필요",
+        "en": "small/mid (Qwen3-4B/8B, Llama-3.1-8B) — no frontier reasoning needed"
+      },
+      "honesty": {
+        "ko": "종종 파인튜닝이 첫 수가 아님 — 프론티어 JSON/structured-output + few-shot 먼저. 규모에서 비용/지연 절감이나 온프렘이 필요할 때 튜닝(좁은 분류는 싼 소형 FT가 단위경제로 확실히 이기는 대표 케이스).",
+        "en": "Often fine-tuning isn't the first move — try frontier JSON/structured-output + few-shot first. Tune when you need cost/latency savings at scale or on-prem (narrow classification is the classic case a cheap small FT wins on unit economics)."
+      },
+      "verdict": {
+        "ko": "이기기 쉬움 (스케일 시)",
+        "en": "Easy win (at scale)"
+      },
+      "note": {
+        "ko": "heuristic",
+        "en": "heuristic"
+      }
     },
     {
       "id": "domain",
-      "task": "도메인 지식 주입 (사내 문서·전문 분야)",
-      "objective": "cpt", "objectiveThen": "sft", "tuning": "qlora", "loraR": 16, "epochs": 1,
-      "dataKey": "domain", "dataRange": "CPT 10M+ 토큰 클린 도메인 텍스트(heuristic), RAG는 데이터 불필요",
-      "base": "언어/도메인 맞는 강한 오픈 모델(Qwen3, Llama-3.1)",
-      "honesty": "매주/매월 바뀌는 사실·문서·가격은 RAG가 이긴다(싸고 갱신·출처인용 가능). CPT는 안정적·심층 도메인 어휘/추론 패턴(법률·의료·과학 전문용어)이 반복될 때만 값어치. 2026 기본: CPT->SFT->DPO + 최신성은 RAG.",
-      "verdict": "RAG 우선, 깊은 도메인만 CPT",
-      "note": "heuristic"
+      "task": {
+        "ko": "도메인 지식 주입 (사내 문서·전문 분야)",
+        "en": "Domain knowledge injection (internal docs / specialty field)"
+      },
+      "objective": "cpt",
+      "objectiveThen": "sft",
+      "tuning": "qlora",
+      "loraR": 16,
+      "epochs": 1,
+      "dataKey": "domain",
+      "dataRange": {
+        "ko": "CPT 10M+ 토큰 클린 도메인 텍스트(heuristic), RAG는 데이터 불필요",
+        "en": "CPT 10M+ tokens of clean domain text (heuristic); RAG needs no training data"
+      },
+      "base": {
+        "ko": "언어/도메인 맞는 강한 오픈 모델(Qwen3, Llama-3.1)",
+        "en": "a strong open model matching the language/domain (Qwen3, Llama-3.1)"
+      },
+      "honesty": {
+        "ko": "매주/매월 바뀌는 사실·문서·가격은 RAG가 이긴다(싸고 갱신·출처인용 가능). CPT는 안정적·심층 도메인 어휘/추론 패턴(법률·의료·과학 전문용어)이 반복될 때만 값어치. 2026 기본: CPT->SFT->DPO + 최신성은 RAG.",
+        "en": "RAG wins for anything that changes weekly/monthly (facts, docs, prices) — cheap, updatable, cites sources. CPT only pays off for stable, deep domain vocab/reasoning (legal, medical, scientific jargon) that recurs. 2026 default: CPT→SFT→DPO + RAG for recency."
+      },
+      "verdict": {
+        "ko": "RAG 우선, 깊은 도메인만 CPT",
+        "en": "RAG first, CPT only for deep domains"
+      },
+      "note": {
+        "ko": "heuristic",
+        "en": "heuristic"
+      }
     },
     {
       "id": "style",
-      "task": "스타일/톤/포맷 준수 (브랜드 보이스)",
-      "objective": "sft", "objectiveThen": "dpo", "tuning": "lora", "loraR": 8, "epochs": 2,
-      "dataKey": "style", "dataRange": "200~500 예시 (포맷 전용은 빠르게 수렴)",
-      "base": "아무 instruction 튜닝 오픈 모델",
-      "honesty": "지금은 프론티어 structured-output + 강한 시스템 프롬프트 + few-shot가 대부분 흡수. 능력이 아니라 스케일/비용/온프렘 때문에만 튜닝.",
-      "verdict": "대개 프롬프트로 충분",
-      "note": "heuristic"
+      "task": {
+        "ko": "스타일/톤/포맷 준수 (브랜드 보이스)",
+        "en": "Style/tone/format compliance (brand voice)"
+      },
+      "objective": "sft",
+      "objectiveThen": "dpo",
+      "tuning": "lora",
+      "loraR": 8,
+      "epochs": 2,
+      "dataKey": "style",
+      "dataRange": {
+        "ko": "200~500 예시 (포맷 전용은 빠르게 수렴)",
+        "en": "200–500 examples (format-only converges fast)"
+      },
+      "base": {
+        "ko": "아무 instruction 튜닝 오픈 모델",
+        "en": "any instruction-tuned open model"
+      },
+      "honesty": {
+        "ko": "지금은 프론티어 structured-output + 강한 시스템 프롬프트 + few-shot가 대부분 흡수. 능력이 아니라 스케일/비용/온프렘 때문에만 튜닝.",
+        "en": "Frontier structured-output + strong system prompts + few-shot now absorb most of this. Tune only for scale/cost/on-prem, not capability."
+      },
+      "verdict": {
+        "ko": "대개 프롬프트로 충분",
+        "en": "Usually prompting suffices"
+      },
+      "note": {
+        "ko": "heuristic",
+        "en": "heuristic"
+      }
     },
     {
       "id": "reasoning-rl",
-      "task": "검증 가능한 보상이 있는 추론/에이전트 (코드 테스트 통과·수학 정답)",
-      "objective": "grpo", "objectiveThen": "", "tuning": "qlora", "loraR": 32, "epochs": 1,
-      "dataKey": "reasoning", "dataRange": "검증 가능한 프롬프트 수백~수천 (테스트케이스·정답). 소량 라벨로 SFT 콜드스타트 후 GRPO",
-      "base": "강한 추론/코드 base(Qwen3, DeepSeek 계열) — GRPO는 괜찮은 시작 정책 필요",
-      "honesty": "파인튜닝이 가장 확실히 이기는 케이스. 검증가능 보상+RL은 프롬프트만으로 정체되는 어려운 태스크에서 진짜 우위. (SFT->GRPO 순서)",
-      "verdict": "가장 강한 FT 케이스",
-      "note": "GRPO는 rollout 메모리 큼 — QLoRA 권장"
+      "task": {
+        "ko": "검증 가능한 보상이 있는 추론/에이전트 (코드 테스트 통과·수학 정답)",
+        "en": "Reasoning/agentic with a verifiable reward (code passes tests, math correct)"
+      },
+      "objective": "grpo",
+      "objectiveThen": "",
+      "tuning": "qlora",
+      "loraR": 32,
+      "epochs": 1,
+      "dataKey": "reasoning",
+      "dataRange": {
+        "ko": "검증 가능한 프롬프트 수백~수천 (테스트케이스·정답). 소량 라벨로 SFT 콜드스타트 후 GRPO",
+        "en": "hundreds-to-thousands of verifiable prompts (test cases, answers). SFT cold-start on a little labeled data, then GRPO"
+      },
+      "base": {
+        "ko": "강한 추론/코드 base(Qwen3, DeepSeek 계열) — GRPO는 괜찮은 시작 정책 필요",
+        "en": "a strong reasoning/code base (Qwen3, DeepSeek-class) — GRPO needs a decent starting policy"
+      },
+      "honesty": {
+        "ko": "파인튜닝이 가장 확실히 이기는 케이스. 검증가능 보상+RL은 프롬프트만으로 정체되는 어려운 태스크에서 진짜 우위. (SFT->GRPO 순서)",
+        "en": "The strongest fine-tuning case. Verifiable reward + RL genuinely beats prompting on hard tasks that plateau. (SFT→GRPO order.)"
+      },
+      "verdict": {
+        "ko": "가장 강한 FT 케이스",
+        "en": "Strongest FT case"
+      },
+      "note": {
+        "ko": "GRPO는 rollout 메모리 큼 — QLoRA 권장",
+        "en": "GRPO is rollout-memory heavy — QLoRA recommended"
+      }
     },
     {
       "id": "worker-distill",
-      "task": "값싼 고빈도 에이전트 워커 (큰 teacher를 작은 student로 증류)",
-      "objective": "gkd", "objectiveThen": "", "tuning": "lora", "loraR": 16, "epochs": 2,
-      "dataKey": "instruction", "dataRange": "teacher가 생성한 on-policy rollout 수천 (student 자기 샘플 + teacher 라벨/logit). TRL GKDTrainer",
-      "base": "소형 dense student(Qwen3-1.7B/4B, Llama-3.2-3B)",
-      "honesty": "호출량이 크면 확실히 값어치 — 능력이 아니라 순수 비용/지연 플레이. teacher가 천장을 정하므로 GRPO는 생략(student가 검증 서브태스크에서 teacher를 넘고 싶을 때만).",
-      "verdict": "고빈도면 확실",
-      "note": "on-policy distillation (GKD)"
+      "task": {
+        "ko": "값싼 고빈도 에이전트 워커 (큰 teacher를 작은 student로 증류)",
+        "en": "Cheap high-frequency agent worker (distill a big teacher into a small student)"
+      },
+      "objective": "gkd",
+      "objectiveThen": "",
+      "tuning": "lora",
+      "loraR": 16,
+      "epochs": 2,
+      "dataKey": "instruction",
+      "dataRange": {
+        "ko": "teacher가 생성한 on-policy rollout 수천 (student 자기 샘플 + teacher 라벨/logit). TRL GKDTrainer",
+        "en": "thousands of teacher-generated on-policy rollouts (student's own samples + teacher labels/logits). TRL GKDTrainer"
+      },
+      "base": {
+        "ko": "소형 dense student(Qwen3-1.7B/4B, Llama-3.2-3B)",
+        "en": "a small dense student (Qwen3-1.7B/4B, Llama-3.2-3B)"
+      },
+      "honesty": {
+        "ko": "호출량이 크면 확실히 값어치 — 능력이 아니라 순수 비용/지연 플레이. teacher가 천장을 정하므로 GRPO는 생략(student가 검증 서브태스크에서 teacher를 넘고 싶을 때만).",
+        "en": "Clearly worth it at high call volume — a pure cost/latency play, not capability. The teacher sets the ceiling, so skip GRPO (only if the student should exceed the teacher on a verifiable subtask)."
+      },
+      "verdict": {
+        "ko": "고빈도면 확실",
+        "en": "Clear win if high-frequency"
+      },
+      "note": {
+        "ko": "on-policy distillation (GKD)",
+        "en": "on-policy distillation (GKD)"
+      }
     }
   ]
 }
