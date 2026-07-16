@@ -45,10 +45,25 @@
     return Object.assign(presetFor(model, "qlora"), { gpu: "h200", numGpus: 8 }); // last resort (may OOM, shown)
   }
 
+  // Best case for a SPECIFIC GPU: highest-quality tuning + fewest GPUs of THAT card that fit.
+  function recommendSetupForGpu(model, gpuId) {
+    const g = GPUS.find(x => x.id === gpuId);
+    if (!g) return recommendSetup(model);
+    for (const tuning of ["full", "lora", "qlora"]) {
+      const ps = presetFor(model, tuning);
+      for (const ng of [1, 2, 4, 8, 16, 32, 72]) {
+        const r = LLMFT.computeTraining(model, g, Object.assign({}, ps, { numGpus: ng, datasetExamples: 0, _skipMax: true }));
+        if (r.fits && r.vramHeadroomGB >= g.vram_gb * 0.12) return Object.assign(ps, { gpu: gpuId, numGpus: ng });
+      }
+    }
+    return Object.assign(presetFor(model, "qlora"), { gpu: gpuId, numGpus: 72 }); // best effort on this card (may OOM, shown)
+  }
+
   function setRadio(name, val) { const el = document.querySelector(`input[name=${name}][value=${val}]`); if (el) el.checked = true; }
 
-  function applyPreset(model, announce) {
-    const ps = recommendSetup(model); // full-first, fit-aware; includes gpu + numGpus + all tuning knobs
+  function applyPreset(model, announce) { applyPresetObj(recommendSetup(model), announce, "model"); }
+
+  function applyPresetObj(ps, announce, origin) {
     setRadio("tuning", ps.tuning);
     $("optimizer").value = ps.optimizer;
     $("loraR").value = ps.loraR;
@@ -73,8 +88,11 @@
     if (GPUS.find(g => g.id === ps.gpu)) { $("gpu").value = ps.gpu; $("numGpus").value = ps.numGpus; }
     if (announce) {
       const gName = (GPUS.find(g => g.id === ps.gpu) || {}).name || ps.gpu;
+      const tail = origin === "gpu"
+        ? `(이 GPU 기준 best-case — Full 우선, 안 맞으면 LoRA/QLoRA + GPU 개수 자동. 직접 조정 가능)`
+        : `(Full 우선 — 안 맞으면 LoRA/QLoRA로 자동 강등. 아래에서 직접 조정 가능)`;
       $("presetNote").style.display = "";
-      $("presetNote").innerHTML = `권장 셋업: <b>${ps.tuning.toUpperCase()}</b> · <b>${gName.split(" (")[0]} ×${ps.numGpus}</b> · LR ${ps.lr} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(Full 우선 — 안 맞으면 LoRA/QLoRA로 자동 강등. 아래에서 직접 조정 가능)</span>`;
+      $("presetNote").innerHTML = `권장 셋업: <b>${ps.tuning.toUpperCase()}</b> · <b>${gName.split(" (")[0]} ×${ps.numGpus}</b> · LR ${ps.lr} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">${tail}</span>`;
     }
   }
 
@@ -361,6 +379,8 @@
       const onModelChange = () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); };
       $("model").addEventListener("change", onModelChange);
       $("customParams").addEventListener("input", () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); });
+      // GPU change -> recompute best case FOR THAT GPU (tuning + count), unless autoPreset is off
+      $("gpu").addEventListener("change", () => { if ($("autoPreset").checked) applyPresetObj(recommendSetupForGpu(currentModel(), $("gpu").value), true, "gpu"); render(); });
       $("copyCmd").addEventListener("click", () => {
         const t = $("runCmd").textContent;
         navigator.clipboard && navigator.clipboard.writeText(t);
