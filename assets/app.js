@@ -19,43 +19,95 @@
         if (r.fits && r.vramHeadroomGB >= g.vram_gb * 0.12) return { gpu: gid, numGpus: ng };
       }
     }
-    return { gpu: "h200", numGpus: 8 }; // last resort (still may be tight for 1T+ full FT)
+    return null; // nothing in the sane cluster range fits -> caller downgrades tuning
   }
 
-  // --- Per-model recommended starting preset (memory-safe, honest starting point, not a promise) ---
-  // Size-driven: big -> QLoRA + paged optim (fits modest GPUs); MoE -> attn-only LoRA (common, avoids
-  // expert-wise MLP LoRA blow-up); small -> LoRA + higher rank. Effective batch = 1 x 16 x GPUs.
-  function recommendedPreset(model) {
-    const p = model.total_params_b || 7, moe = !!model.moe;
-    let tuning, optimizer, loraR = 16;
-    if (p >= 30)      { tuning = "qlora"; optimizer = "paged_adamw"; }
-    else if (p >= 8)  { tuning = "lora";  optimizer = "adamw_8bit"; }
-    else              { tuning = "lora";  optimizer = "adamw"; loraR = 32; }
-    return { tuning, optimizer, loraR, targetModules: moe ? "attn_all" : "all",
-             perDeviceBatch: 1, gradAccum: 16, seqLen: 2048, gradCkpt: true, epochs: 2 };
+  // Full config set per tuning method (every method carries ITS complete knobs, defaults sane).
+  function presetFor(model, tuning) {
+    const moe = !!model.moe;
+    const p = { tuning, targetModules: moe ? "attn_all" : "all", loraR: 16, loraAlpha: 32, loraDropout: 0.05,
+      perDeviceBatch: 1, gradAccum: 16, seqLen: 2048, gradCkpt: true, epochs: 2,
+      scheduler: "cosine", warmup: 0.03, precision: "bf16", packing: true,
+      parallelism: "fsdp", cpuOffload: false, quantType: "nf4", computeDtype: "bfloat16", doubleQuant: true };
+    if (tuning === "full")      { p.optimizer = "adamw";       p.lr = "1e-5"; }   // full: LR ~10x lower
+    else if (tuning === "lora") { p.optimizer = "adamw_8bit";  p.lr = "2e-4"; }
+    else /* qlora */            { p.optimizer = "paged_adamw"; p.lr = "2e-4"; }
+    return p;
+  }
+
+  // Best practice = highest-quality tuning that FITS (full-first), + the hardware that fits it.
+  function recommendSetup(model) {
+    for (const tuning of ["full", "lora", "qlora"]) {
+      const ps = presetFor(model, tuning);
+      const hw = recommendBestGpu(model, ps);
+      if (hw) return Object.assign(ps, hw);
+    }
+    return Object.assign(presetFor(model, "qlora"), { gpu: "h200", numGpus: 8 }); // last resort (may OOM, shown)
   }
 
   function setRadio(name, val) { const el = document.querySelector(`input[name=${name}][value=${val}]`); if (el) el.checked = true; }
 
   function applyPreset(model, announce) {
-    const ps = recommendedPreset(model);
+    const ps = recommendSetup(model); // full-first, fit-aware; includes gpu + numGpus + all tuning knobs
     setRadio("tuning", ps.tuning);
     $("optimizer").value = ps.optimizer;
     $("loraR").value = ps.loraR;
+    $("loraAlpha").value = ps.loraAlpha;
+    $("loraDropout").value = ps.loraDropout;
     $("targetModules").value = ps.targetModules;
     $("batch").value = ps.perDeviceBatch;
     $("accum").value = ps.gradAccum;
     $("seq").value = ps.seqLen;
     $("gradCkpt").checked = ps.gradCkpt;
     $("epochs").value = ps.epochs;
-    // best-practice hardware: pick GPU + count that fits this preset
-    const hw = recommendBestGpu(model, ps);
-    if (GPUS.find(g => g.id === hw.gpu)) { $("gpu").value = hw.gpu; $("numGpus").value = hw.numGpus; }
+    $("lr").value = ps.lr;
+    $("scheduler").value = ps.scheduler;
+    $("warmup").value = ps.warmup;
+    $("precision").value = ps.precision;
+    $("packing").checked = ps.packing;
+    $("parallelism").value = ps.parallelism;
+    $("cpuOffload").checked = ps.cpuOffload;
+    $("quantType").value = ps.quantType;
+    $("computeDtype").value = ps.computeDtype;
+    $("doubleQuant").checked = ps.doubleQuant;
+    if (GPUS.find(g => g.id === ps.gpu)) { $("gpu").value = ps.gpu; $("numGpus").value = ps.numGpus; }
     if (announce) {
-      const gName = (GPUS.find(g => g.id === hw.gpu) || {}).name || hw.gpu;
+      const gName = (GPUS.find(g => g.id === ps.gpu) || {}).name || ps.gpu;
       $("presetNote").style.display = "";
-      $("presetNote").innerHTML = `권장 셋업: <b>${gName.split(" (")[0]} ×${hw.numGpus}</b> · <b>${ps.tuning.toUpperCase()}</b> r=${ps.loraR} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(맞는 최소 하드웨어 + 메모리 안전 설정 — 아래에서 직접 조정 가능)</span>`;
+      $("presetNote").innerHTML = `권장 셋업: <b>${ps.tuning.toUpperCase()}</b> · <b>${gName.split(" (")[0]} ×${ps.numGpus}</b> · LR ${ps.lr} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(Full 우선 — 안 맞으면 LoRA/QLoRA로 자동 강등. 아래에서 직접 조정 가능)</span>`;
     }
+  }
+
+  // Deterministic TRL scaffold from the chosen config (code owns the format).
+  function genCommand(model, c, r) {
+    const isLora = c.tuning !== "full", isQ = c.tuning === "qlora";
+    const trainer = { sft: "SFTTrainer", cpt: "SFTTrainer", dpo: "DPOTrainer", grpo: "GRPOTrainer", gkd: "GKDTrainer" }[c.objective] || "SFTTrainer";
+    const cfgName = { sft: "SFTConfig", cpt: "SFTConfig", dpo: "DPOConfig", grpo: "GRPOConfig", gkd: "GKDConfig" }[c.objective] || "SFTConfig";
+    const tmods = c.targetModules === "all" ? "all-linear" : (c.targetModules === "attn_all" ? '"q_proj","k_proj","v_proj","o_proj"' : '"q_proj","v_proj"');
+    const modelId = model.hf || model.name;
+    let s = "";
+    s += `# pip install trl peft transformers accelerate${isQ ? " bitsandbytes" : ""}\n`;
+    s += `# ${model.name} · ${c.tuning.toUpperCase()} · ${c.objective.toUpperCase()} · ${c.numGpus}x ${(GPUS.find(g=>g.id===$("gpu").value)||{}).name?.split(" (")[0] || "GPU"}\n`;
+    s += `import torch\nfrom transformers import AutoModelForCausalLM${isQ ? ", BitsAndBytesConfig" : ""}\n`;
+    s += `from trl import ${cfgName}, ${trainer}\n`;
+    if (isLora) s += `from peft import LoraConfig\n`;
+    s += `\nMODEL = "${modelId}"\n`;
+    if (isQ) s += `bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="${c.quantType}",\n    bnb_4bit_use_double_quant=${c.doubleQuant ? "True" : "False"}, bnb_4bit_compute_dtype=torch.${c.computeDtype})\n`;
+    s += `model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.${isQ ? c.computeDtype : (c.precision === "bf16" ? "bfloat16" : "float16")}${isQ ? ", quantization_config=bnb" : ""})\n`;
+    if (isLora) s += `peft_config = LoraConfig(r=${c.loraR}, lora_alpha=${c.loraAlpha}, lora_dropout=${c.loraDropout},\n    target_modules=${c.targetModules === "all" ? '"all-linear"' : "[" + tmods + "]"}, task_type="CAUSAL_LM")\n`;
+    s += `\nargs = ${cfgName}(\n`;
+    s += `    per_device_train_batch_size=${c.perDeviceBatch}, gradient_accumulation_steps=${c.gradAccum},\n`;
+    s += `    num_train_epochs=${c.epochs}, learning_rate=${c.lr}, lr_scheduler_type="${c.scheduler}", warmup_ratio=${c.warmup},\n`;
+    s += `    ${c.precision}=True, gradient_checkpointing=${c.gradCkpt ? "True" : "False"}, optim="${c.optimizer}", max_length=${c.seqLen},\n`;
+    if (c.objective === "sft" || c.objective === "cpt") s += `    packing=${c.packing ? "True" : "False"},\n`;
+    s += `    output_dir="out", logging_steps=10, save_steps=200)\n`;
+    s += `\ntrainer = ${trainer}(model=model, args=args${isLora ? ", peft_config=peft_config" : ""}, train_dataset=ds)  # ds = 데이터셋 로드해서 채우기\ntrainer.train()`;
+    if (c.tuning === "full" && c.numGpus > 1) {
+      s += `\n\n# 실행 (Full ${c.numGpus}-GPU): ` + (c.parallelism === "deepspeed_zero3"
+        ? `deepspeed --num_gpus ${c.numGpus} train.py --deepspeed zero3.json` + (c.cpuOffload ? " (offload_optimizer+param)" : "")
+        : `accelerate launch --num_processes ${c.numGpus} --use_fsdp --fsdp_sharding_strategy FULL_SHARD` + (c.cpuOffload ? " --fsdp_offload_params true" : "") + " train.py");
+    }
+    return s;
   }
 
   function applyDataset(id) {
@@ -82,6 +134,7 @@
   }
 
   function cfg() {
+    const parallelism = $("parallelism").value;
     return {
       tuning: radioVal("tuning"),
       objective: $("objective").value,
@@ -92,11 +145,26 @@
       gradCkpt: $("gradCkpt").checked,
       optimizer: $("optimizer").value,
       loraR: +$("loraR").value,
+      loraAlpha: +$("loraAlpha").value,
+      loraDropout: +$("loraDropout").value,
       targetModules: $("targetModules").value,
       datasetExamples: +$("examples").value,
       avgTokensPerExample: +$("avgTok").value,
       epochs: +$("epochs").value,
       mfu: +$("mfu").value,
+      // training args (feed the generated scaffold; math uses strategy/optimizer/gradCkpt only)
+      lr: $("lr").value.trim() || "2e-4",
+      scheduler: $("scheduler").value,
+      warmup: +$("warmup").value,
+      precision: $("precision").value,
+      packing: $("packing").checked,
+      parallelism: parallelism,
+      cpuOffload: $("cpuOffload").checked,
+      quantType: $("quantType").value,
+      computeDtype: $("computeDtype").value,
+      doubleQuant: $("doubleQuant").checked,
+      // parallelism -> compute strategy (fsdp/zero3 = full shard; ddp = replicate)
+      strategy: parallelism === "ddp" ? "ddp" : "fsdp",
     };
   }
 
@@ -120,8 +188,16 @@
     $("tokLabel").textContent = c.avgTokensPerExample;
     $("epochLabel").textContent = c.epochs;
     $("mfuLabel").textContent = c.mfu.toFixed(2);
+    $("alphaLabel").textContent = "α=" + c.loraAlpha;
+    $("dropoutLabel").textContent = c.loraDropout.toFixed(2);
+    $("warmupLabel").textContent = c.warmup.toFixed(2);
+    $("lrHint").textContent = c.tuning === "full" ? "full 1e-6~1e-5" : "LoRA 1e-4~3e-4";
+    // per-tuning config blocks: each method shows ITS full knob set
+    $("fullInputs").style.display = c.tuning === "full" ? "" : "none";
     $("loraInputs").style.display = c.tuning === "full" ? "none" : "";
+    $("qloraInputs").style.display = c.tuning === "qlora" ? "" : "none";
     $("loraHelperBlock").style.display = c.tuning === "full" ? "none" : "";
+    $("packingWrap").style.display = (c.objective === "sft" || c.objective === "cpt") ? "" : "none";
 
     // chips
     $("modelChips").innerHTML =
@@ -193,6 +269,15 @@
     $("warnBlock").style.display = warns.length ? "" : "none";
     if (warns.length) $("warns").innerHTML =
       `<div class="block-title">주의 신호</div>` + warns.map(w => `<div class="verdict no" style="margin:6px 0">⚠️ ${esc(w)}</div>`).join("");
+
+    // optimizer steps (needs no FLOPS spec) — appended to the effective-batch box
+    if (c.datasetExamples > 0) {
+      const steps = Math.ceil((c.datasetExamples * c.epochs) / Math.max(1, r.effectiveBatch));
+      $("effBatch").innerHTML += `<div class="dim" style="margin-top:4px">≈ <b>${fmt(steps, 0)}</b> optimizer step (예시 ${c.datasetExamples.toLocaleString()} × ${c.epochs}ep ÷ eff.batch ${r.effectiveBatch})</div>`;
+    }
+
+    // runnable TRL scaffold reflecting every chosen knob
+    $("runCmd").textContent = genCommand(model, c, r);
   }
 
   function renderReference() {
@@ -276,6 +361,11 @@
       const onModelChange = () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); };
       $("model").addEventListener("change", onModelChange);
       $("customParams").addEventListener("input", () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); });
+      $("copyCmd").addEventListener("click", () => {
+        const t = $("runCmd").textContent;
+        navigator.clipboard && navigator.clipboard.writeText(t);
+        $("copyCmd").textContent = "복사됨 ✓"; setTimeout(() => $("copyCmd").textContent = "복사", 1500);
+      });
       $("dataset").addEventListener("change", () => applyDataset($("dataset").value));
       $("taskPicker").addEventListener("change", () => applyRecipe($("taskPicker").value, true));
       renderReference();

@@ -29,9 +29,9 @@
 
     <label style="margin-top:6px">튜닝 방식
       <div class="segmented" id="tuning">
-        <label><input type="radio" name="tuning" value="qlora" checked> QLoRA</label>
+        <label><input type="radio" name="tuning" value="full" checked> Full</label>
         <label><input type="radio" name="tuning" value="lora"> LoRA</label>
-        <label><input type="radio" name="tuning" value="full"> Full</label>
+        <label><input type="radio" name="tuning" value="qlora"> QLoRA</label>
       </div>
     </label>
 
@@ -58,15 +58,71 @@
     </select></label>
     <label class="ckwrap"><input type="checkbox" id="gradCkpt" checked> gradient checkpointing <span class="dim">(액티베이션 ~5x↓, ~30% 느려짐)</span></label>
 
+    <div class="block">
+      <div class="block-title">학습 하이퍼파라미터 <span class="dim">(튜닝 방식별 기본값 자동)</span></div>
+      <div class="grid2b">
+        <label>학습률 (LR) <span class="hint" id="lrHint"></span>
+          <input type="text" id="lr" inputmode="decimal" value="1e-5" style="width:100%"></label>
+        <label>LR 스케줄러 <select id="scheduler">
+          <option value="cosine">cosine</option>
+          <option value="linear">linear</option>
+          <option value="constant_with_warmup">constant+warmup</option>
+        </select></label>
+      </div>
+      <div class="grid2b">
+        <label>warmup ratio <span class="lab" id="warmupLabel"></span>
+          <input type="range" id="warmup" min="0" max="0.1" step="0.01" value="0.03"></label>
+        <label>정밀도 <select id="precision">
+          <option value="bf16">bf16 (권장)</option>
+          <option value="fp16">fp16</option>
+        </select></label>
+      </div>
+      <label class="ckwrap" id="packingWrap"><input type="checkbox" id="packing" checked> sequence packing <span class="dim">(SFT/CPT — padding 낭비↓)</span></label>
+    </div>
+
+    <div class="block" id="fullInputs">
+      <div class="block-title">Full 파인튜닝 설정</div>
+      <label>병렬화 전략 <select id="parallelism">
+        <option value="fsdp">FSDP full-shard (권장)</option>
+        <option value="deepspeed_zero3">DeepSpeed ZeRO-3 (동등 샤딩)</option>
+        <option value="ddp">DDP (복제 — 소형만)</option>
+      </select></label>
+      <label class="ckwrap"><input type="checkbox" id="cpuOffload"> optimizer/param CPU offload <span class="dim">(VRAM↓, 느려짐)</span></label>
+      <div class="dim" style="margin-top:4px">Full은 base 전체 갱신 → 가장 무겁고 품질 상한이 높습니다. LR은 LoRA보다 ~10x 낮게(1e-6~1e-5).</div>
+    </div>
+
     <div class="block" id="loraInputs">
       <div class="block-title">LoRA 하이퍼파라미터</div>
-      <label>rank r <span class="lab" id="rLabel"></span>
-        <input type="range" id="loraR" min="4" max="128" step="4" value="16"></label>
-      <label style="margin-top:6px">target modules <select id="targetModules">
-        <option value="all">all-linear (attn+MLP, 품질↑)</option>
-        <option value="attn_all">attention (q,k,v,o)</option>
-        <option value="attn">q,v only (가장 가벼움)</option>
-      </select></label>
+      <div class="grid2b">
+        <label>rank r <span class="lab" id="rLabel"></span>
+          <input type="range" id="loraR" min="4" max="256" step="4" value="16"></label>
+        <label>alpha <span class="lab" id="alphaLabel"></span>
+          <input type="range" id="loraAlpha" min="4" max="512" step="4" value="32"></label>
+      </div>
+      <div class="grid2b">
+        <label>dropout <span class="lab" id="dropoutLabel"></span>
+          <input type="range" id="loraDropout" min="0" max="0.2" step="0.01" value="0.05"></label>
+        <label>target modules <select id="targetModules">
+          <option value="all">all-linear (attn+MLP, 품질↑)</option>
+          <option value="attn_all">attention (q,k,v,o)</option>
+          <option value="attn">q,v only (가장 가벼움)</option>
+        </select></label>
+      </div>
+    </div>
+
+    <div class="block" id="qloraInputs">
+      <div class="block-title">QLoRA 양자화 설정</div>
+      <div class="grid2b">
+        <label>quant type <select id="quantType">
+          <option value="nf4">NF4 (권장)</option>
+          <option value="fp4">FP4</option>
+        </select></label>
+        <label>compute dtype <select id="computeDtype">
+          <option value="bfloat16">bfloat16</option>
+          <option value="float16">float16</option>
+        </select></label>
+      </div>
+      <label class="ckwrap"><input type="checkbox" id="doubleQuant" checked> double quantization <span class="dim">(추가 ~0.4bit/param 절감)</span></label>
     </div>
 
     <div class="block">
@@ -114,6 +170,12 @@
     </div>
 
     <div class="block" id="warnBlock"><div id="warns"></div></div>
+
+    <div class="block">
+      <div class="block-title">실행 설정 — TRL 스캐폴드 <button type="button" id="copyCmd" class="ref-tag" style="cursor:pointer;border:0">복사</button></div>
+      <pre class="cmd" id="runCmd"></pre>
+      <div class="dim">선택한 값(방법·LR·배치·양자화·병렬화)을 그대로 채운 시작 스캐폴드입니다. 데이터 로더·평가는 태스크에 맞게 채우세요.</div>
+    </div>
   </section>
 </main>
 
