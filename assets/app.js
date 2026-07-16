@@ -101,13 +101,16 @@
     const isLora = c.tuning !== "full", isQ = c.tuning === "qlora";
     const trainer = { sft: "SFTTrainer", cpt: "SFTTrainer", dpo: "DPOTrainer", grpo: "GRPOTrainer", gkd: "GKDTrainer" }[c.objective] || "SFTTrainer";
     const cfgName = { sft: "SFTConfig", cpt: "SFTConfig", dpo: "DPOConfig", grpo: "GRPOConfig", gkd: "GKDConfig" }[c.objective] || "SFTConfig";
+    // internal optimizer key -> valid HF TrainingArguments optim string (bare "adamw"/"paged_adamw" are invalid)
+    const OPTIM_TRL = { adamw: "adamw_torch", adamw_8bit: "adamw_8bit", paged_adamw: "paged_adamw_8bit" };
+    const optimStr = OPTIM_TRL[c.optimizer] || "adamw_torch";
     const tmods = c.targetModules === "all" ? "all-linear" : (c.targetModules === "attn_all" ? '"q_proj","k_proj","v_proj","o_proj"' : '"q_proj","v_proj"');
     const modelId = model.hf || model.name;
     let s = "";
     s += `# pip install trl peft transformers accelerate${isQ ? " bitsandbytes" : ""}\n`;
     s += `# ${model.name} · ${c.tuning.toUpperCase()} · ${c.objective.toUpperCase()} · ${c.numGpus}x ${(GPUS.find(g=>g.id===$("gpu").value)||{}).name?.split(" (")[0] || "GPU"}\n`;
     s += `import torch\nfrom transformers import AutoModelForCausalLM${isQ ? ", BitsAndBytesConfig" : ""}\n`;
-    s += `from trl import ${cfgName}, ${trainer}\n`;
+    s += c.objective === "gkd" ? `from trl.experimental.gkd import ${cfgName}, ${trainer}\n` : `from trl import ${cfgName}, ${trainer}\n`;
     if (isLora) s += `from peft import LoraConfig\n`;
     s += `\nMODEL = "${modelId}"\n`;
     if (isQ) s += `bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="${c.quantType}",\n    bnb_4bit_use_double_quant=${c.doubleQuant ? "True" : "False"}, bnb_4bit_compute_dtype=torch.${c.computeDtype})\n`;
@@ -116,7 +119,7 @@
     s += `\nargs = ${cfgName}(\n`;
     s += `    per_device_train_batch_size=${c.perDeviceBatch}, gradient_accumulation_steps=${c.gradAccum},\n`;
     s += `    num_train_epochs=${c.epochs}, learning_rate=${c.lr}, lr_scheduler_type="${c.scheduler}", warmup_ratio=${c.warmup},\n`;
-    s += `    ${c.precision}=True, gradient_checkpointing=${c.gradCkpt ? "True" : "False"}, optim="${c.optimizer}", max_length=${c.seqLen},\n`;
+    s += `    ${c.precision}=True, gradient_checkpointing=${c.gradCkpt ? "True" : "False"}, optim="${optimStr}", max_length=${c.seqLen},\n`;
     if (c.objective === "sft" || c.objective === "cpt") s += `    packing=${c.packing ? "True" : "False"},\n`;
     s += `    output_dir="out", logging_steps=10, save_steps=200)\n`;
     s += `\ntrainer = ${trainer}(model=model, args=args${isLora ? ", peft_config=peft_config" : ""}, train_dataset=ds)  # ds = 데이터셋 로드해서 채우기\ntrainer.train()`;
@@ -381,6 +384,11 @@
       $("customParams").addEventListener("input", () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); });
       // GPU change -> recompute best case FOR THAT GPU (tuning + count), unless autoPreset is off
       $("gpu").addEventListener("change", () => { if ($("autoPreset").checked) applyPresetObj(recommendSetupForGpu(currentModel(), $("gpu").value), true, "gpu"); render(); });
+      // tuning change -> update optimizer + LR to that method's default (unless autoPreset off)
+      document.querySelectorAll("input[name=tuning]").forEach(el => el.addEventListener("change", () => {
+        if ($("autoPreset").checked) { const ps = presetFor(currentModel(), radioVal("tuning")); $("optimizer").value = ps.optimizer; $("lr").value = ps.lr; }
+        render();
+      }));
       $("copyCmd").addEventListener("click", () => {
         const t = $("runCmd").textContent;
         navigator.clipboard && navigator.clipboard.writeText(t);

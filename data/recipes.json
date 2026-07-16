@@ -13,7 +13,7 @@
     "winConditions": [
       {"cond": "좁고 반복적 + 출력 포맷 고정", "detail": "분류·검증·구조화 추출. 소량 정예 데이터로도 우위. (LIMA: 1,000개 정예로 정렬 가능 존재증명 — 만능 아님)", "src": "https://arxiv.org/abs/2305.11206"},
       {"cond": "검증 가능한 보상이 존재", "detail": "코드가 테스트 통과·수학 정답 등 환경 피드백 -> GRPO/RFT가 지도학습보다 유리. OpenAI가 SFT를 접으며 RFT만 남긴 이유.", "src": "https://developers.openai.com/api/docs/guides/reinforcement-fine-tuning"},
-      {"cond": "호출 빈도 높고 비용·지연이 지배 제약", "detail": "에이전트 워커 슬롯. 커스텀 소형 FT 모델이 프론티어 대비 추론당 비용을 크게 낮춘 사례 존재(한 금융 태스크: 13.8배 저비용 + 정확도 우위).", "src": "https://flowtivity.ai/blog/custom-ai-beats-frontier-models/"},
+      {"cond": "호출 빈도 높고 비용·지연이 지배 제약", "detail": "에이전트 워커 슬롯. 커스텀 소형 FT 모델이 프론티어 대비 추론당 비용을 크게 낮춘 사례(Thinking Machines Lab 금융 태스크: 정확도 78.2%→84.7% + 추론당 13.8배 저비용).", "src": "https://thinkingmachines.ai/news/learning-to-replicate-expert-judgment-in-financial-tasks/"},
       {"cond": "데이터 주권·규제·폐쇄망 요구", "detail": "공공·금융·방산은 애초에 외부 API 선택지가 제한. 소유형 모델이 유일 경로.", "src": ""},
       {"cond": "프론티어 API 자체가 공급 리스크", "detail": "수출통제·정책변경은 가상 시나리오가 아님(Fable 5·Mythos 5 19일 셧다운).", "src": "https://www.anthropic.com/news/fable-mythos-access"}
     ],
