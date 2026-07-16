@@ -21,6 +21,8 @@
     <label style="margin-top:8px;display:block">또는 직접 파라미터 (B) <span class="hint">custom</span>
       <input type="text" id="customParams" inputmode="decimal" placeholder="예: 14 (비우면 위 선택 사용)"></label>
     <div class="chips" id="modelChips"></div>
+    <div class="model-note" id="presetNote" style="display:none"></div>
+    <label class="ckwrap"><input type="checkbox" id="autoPreset" checked> 모델 선택 시 권장 시작 설정 자동 적용 <span class="dim">(끄면 내 설정 유지)</span></label>
 
     <label style="margin-top:6px">튜닝 방식
       <div class="segmented" id="tuning">
@@ -34,8 +36,8 @@
     <div class="model-note" id="objectiveNote"></div>
 
     <label>하드웨어 <select id="gpu"></select></label>
-    <label>GPU 개수 <span class="lab" id="numGpusLabel"></span>
-      <input type="range" id="numGpus" min="1" max="64" step="1" value="1"></label>
+    <label>GPU 개수 <span class="lab" id="numGpusLabel"></span> <span class="hint">NVL72 = 72장</span>
+      <input type="range" id="numGpus" min="1" max="72" step="1" value="1"></label>
 
     <div class="grid2b">
       <label>per-device 배치 <span class="lab" id="batchLabel"></span>
@@ -67,8 +69,8 @@
     <div class="block">
       <div class="block-title">데이터 & 시간</div>
       <div class="grid2b">
-        <label>데이터 예시 수 <span class="lab" id="exLabel"></span>
-          <input type="range" id="examples" min="0" max="200000" step="500" value="10000"></label>
+        <label>데이터 예시 수 <span class="lab" id="exLabel"></span> <span class="hint">직접 입력 (상한 없음)</span>
+          <input type="number" id="examples" min="0" step="500" value="10000" style="width:100%"></label>
         <label>예시당 평균 토큰 <span class="lab" id="tokLabel"></span>
           <input type="range" id="avgTok" min="64" max="8192" step="64" value="512"></label>
       </div>
@@ -111,6 +113,15 @@
     <div class="block" id="warnBlock"><div id="warns"></div></div>
   </section>
 </main>
+
+<section class="reference" id="guide">
+  <h2>어떤 작업을 · 얼마의 데이터로 · 어떻게 학습하나 <span class="ref-tag">2026 가이드</span></h2>
+  <p class="ref-sub">모델만 골라선 "그래서 얼마의 데이터로 어떻게?"가 안 잡히죠. 작업을 고르면 방법·데이터량·베이스 모델과 <b>파인튜닝을 애초에 할 가치가 있는지</b>까지 알려주고, 위 계산기 입력도 그 레시피로 채웁니다.</p>
+  <p class="ref-sub" id="marketShift"></p>
+  <div class="block" id="ftGate"></div>
+  <label style="margin-top:12px;display:block">작업 선택 <select id="taskPicker"></select></label>
+  <div class="block" id="recipeDetail" style="margin-top:10px"></div>
+</section>
 
 <section class="reference">
   <h2>추천 기법 · 데이터 포맷 · 최근 기법</h2>

@@ -21,16 +21,19 @@ CFGS = [
     dict(tuning="qlora", numGpus=1, perDeviceBatch=1, gradAccum=16, seqLen=2048, gradCkpt=True, optimizer="paged_adamw", loraR=32, targetModules="attn_all", datasetExamples=2000, avgTokensPerExample=512, epochs=1, mfu=0.3),
 ]
 
-def lora_params(hidden, n_layers, r, tgt):
+def lora_params(hidden, n_layers, r, tgt, kv_dim=None, intermediate=None):
     if not hidden or not n_layers:
         return None
-    h, i = hidden, 3.5 * hidden
+    h = hidden
+    kv = kv_dim if (kv_dim and kv_dim > 0) else h
+    i = intermediate if (intermediate and intermediate > 0) else 3.5 * h
+    q = r * (h + h); o = r * (h + h); k = r * (h + kv); v = r * (h + kv)
     if tgt == "attn":
-        per = 2 * (r * (h + h))
+        per = q + v
     elif tgt == "attn_all":
-        per = 4 * (r * (h + h))
+        per = q + k + v + o
     else:
-        per = 4 * (r * (h + h)) + 2 * (r * (h + i)) + 1 * (r * (i + h))
+        per = q + k + v + o + r * (h + i) + r * (h + i) + r * (i + h)
     return per * n_layers
 
 def compute(m, g, c):
@@ -43,7 +46,7 @@ def compute(m, g, c):
     if tuning == "full":
         train = N
     else:
-        ex = lora_params(m.get("hidden"), m.get("n_layers"), r, tgt)
+        ex = lora_params(m.get("hidden"), m.get("n_layers"), r, tgt, m.get("kv_dim"), m.get("intermediate"))
         train = ex if ex is not None else 0.005 * N
     base_bytes = WEIGHT_NF4 if tuning == "qlora" else WEIGHT_BF16
     baseGB = N * base_bytes / 1e9

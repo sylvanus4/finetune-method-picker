@@ -23,18 +23,24 @@
 
   const FLOP_PER_TOKEN_PER_PARAM = 6; // C ≈ 6·N·D  (Kaplan et al. arXiv:2001.08361)
 
-  // LoRA trainable params ≈ Σ_targeted r·(in+out). Source: LoRA paper arXiv:2106.09685. We approximate
-  // module in/out dims from hidden h and intermediate i≈3.5h (SwiGLU-typical).
+  // LoRA trainable params ≈ Σ_targeted r·(in+out). Source: LoRA paper arXiv:2106.09685.
+  // GQA/MLA-aware: k,v projections output kv_dim (< h for grouped-query / compressed-KV models),
+  // so they cost r·(h+kv), not r·(h+h). q,o cost r·(h+h). MLP uses actual intermediate when known,
+  // else i≈3.5h (a Llama-3/Mistral coincidence, NOT a SwiGLU law — Llama-2≈2.7h, Qwen2≈5.3h — so we
+  // prefer the model's real intermediate_size when the data file provides it).
   // targetModules: 'attn' (q,v) | 'attn_all' (q,k,v,o) | 'all' (attn + gate,up,down).
-  function loraTrainableParams(hidden, nLayers, r, targetModules) {
+  // Caveat: for MoE models the MLP LoRA count assumes one dense MLP per layer; true expert-wise LoRA
+  // differs. Attn-only targeting (common for MoE) is unaffected. Labeled approximate in the UI.
+  function loraTrainableParams(hidden, nLayers, r, targetModules, kvDim, intermediate) {
     if (!hidden || !nLayers) return null; // caller falls back to a % heuristic
-    const h = hidden, i = 3.5 * h;
+    const h = hidden, kv = (kvDim && kvDim > 0) ? kvDim : h, i = (intermediate && intermediate > 0) ? intermediate : 3.5 * h;
+    const q = r * (h + h), o = r * (h + h), k = r * (h + kv), v = r * (h + kv);
     let perLayer;
-    if (targetModules === "attn")          perLayer = 2 * (r * (h + h));            // q,v
-    else if (targetModules === "attn_all") perLayer = 4 * (r * (h + h));            // q,k,v,o (ignores GQA)
-    else /* all */                         perLayer = 4 * (r * (h + h))             // q,k,v,o
-                                                     + 2 * (r * (h + i))            // gate, up
-                                                     + 1 * (r * (i + h));           // down
+    if (targetModules === "attn")          perLayer = q + v;                        // q,v
+    else if (targetModules === "attn_all") perLayer = q + k + v + o;                // q,k,v,o (GQA-aware)
+    else /* all */                         perLayer = q + k + v + o                 // q,k,v,o
+                                                     + r * (h + i) + r * (h + i)     // gate, up
+                                                     + r * (i + h);                  // down
     return perLayer * nLayers;
   }
 
@@ -58,7 +64,7 @@
     let trainableParams, trainableSource;
     if (tuning === "full") { trainableParams = N; trainableSource = "full (all params)"; }
     else {
-      const exact = loraTrainableParams(model.hidden, model.n_layers, r, targetModules);
+      const exact = loraTrainableParams(model.hidden, model.n_layers, r, targetModules, model.kv_dim, model.intermediate);
       if (exact != null) { trainableParams = exact; trainableSource = "LoRA formula 2·r·Σ(in+out)"; }
       else { trainableParams = 0.005 * N; trainableSource = "LoRA ~0.5% of N (fallback, arch unknown)"; }
     }

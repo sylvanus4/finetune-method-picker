@@ -4,7 +4,39 @@
   const $ = id => document.getElementById(id);
   const fmt = (x, d = 1) => (x == null || isNaN(x) ? "—" : Number(x).toLocaleString("en-US", { maximumFractionDigits: d }));
   const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-  let MODELS = [], GPUS = [], KB = null, TECH = null;
+  let MODELS = [], GPUS = [], KB = null, TECH = null, RECIPES = null;
+
+  // --- Per-model recommended starting preset (memory-safe, honest starting point, not a promise) ---
+  // Size-driven: big -> QLoRA + paged optim (fits modest GPUs); MoE -> attn-only LoRA (common, avoids
+  // expert-wise MLP LoRA blow-up); small -> LoRA + higher rank. Effective batch = 1 x 16 x GPUs.
+  function recommendedPreset(model) {
+    const p = model.total_params_b || 7, moe = !!model.moe;
+    let tuning, optimizer, loraR = 16;
+    if (p >= 30)      { tuning = "qlora"; optimizer = "paged_adamw"; }
+    else if (p >= 8)  { tuning = "lora";  optimizer = "adamw_8bit"; }
+    else              { tuning = "lora";  optimizer = "adamw"; loraR = 32; }
+    return { tuning, optimizer, loraR, targetModules: moe ? "attn_all" : "all",
+             perDeviceBatch: 1, gradAccum: 16, seqLen: 2048, gradCkpt: true, epochs: 2 };
+  }
+
+  function setRadio(name, val) { const el = document.querySelector(`input[name=${name}][value=${val}]`); if (el) el.checked = true; }
+
+  function applyPreset(model, announce) {
+    const ps = recommendedPreset(model);
+    setRadio("tuning", ps.tuning);
+    $("optimizer").value = ps.optimizer;
+    $("loraR").value = ps.loraR;
+    $("targetModules").value = ps.targetModules;
+    $("batch").value = ps.perDeviceBatch;
+    $("accum").value = ps.gradAccum;
+    $("seq").value = ps.seqLen;
+    $("gradCkpt").checked = ps.gradCkpt;
+    $("epochs").value = ps.epochs;
+    if (announce) {
+      $("presetNote").style.display = "";
+      $("presetNote").innerHTML = `권장 시작 설정 적용: <b>${ps.tuning.toUpperCase()}</b> · r=${ps.loraR} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(메모리 안전한 출발점 — 필요 시 직접 조정)</span>`;
+    }
+  }
 
   function opt(v, t) { const o = document.createElement("option"); o.value = v; o.textContent = t; return o; }
   function radioVal(name) { const el = document.querySelector(`input[name=${name}]:checked`); return el ? el.value : null; }
@@ -147,21 +179,66 @@
         `<span class="ref-price"><a class="ref-tag" href="${t.url}" target="_blank" rel="noopener">src</a></span></div>`).join("");
   }
 
+  function renderGuide() {
+    if (!RECIPES) return;
+    const ms = RECIPES.marketShift;
+    $("marketShift").innerHTML = `<b>${esc(ms.headline)}</b><div class="ref-grid" style="margin-top:10px">` +
+      ms.tracks.map(t => `<div class="ref-card"><h3 style="font-size:13px">${esc(t.name)}</h3><div class="dim" style="font-size:12px;line-height:1.5">${esc(t.what)} ${t.src ? `<a class="ref-tag" href="${t.src}" target="_blank" rel="noopener">src</a>` : ""}</div></div>`).join("") + `</div>`;
+    const g = RECIPES.whenToFineTune;
+    $("ftGate").innerHTML = `<div class="block-title">파인튜닝이 확실히 이기는 5조건</div><ul class="fixlist">` +
+      g.winConditions.map(c => `<li><b>${esc(c.cond)}</b> — ${esc(c.detail)} ${c.src ? `<a class="ref-tag" href="${c.src}" target="_blank" rel="noopener">src</a>` : ""}</li>`).join("") + `</ul>` +
+      `<div class="verdict no" style="margin-top:8px">⚠️ 먼저 RAG를 의심하라: ${esc(g.firstAskRAG)}</div>` +
+      `<div class="verdict" style="margin-top:6px;background:color-mix(in srgb,var(--accent) 10%, transparent)">양보할 영역: ${esc(g.deferToFrontier)}</div>`;
+    $("taskPicker").innerHTML = `<option value="">— 작업을 고르면 레시피 + 계산기 입력이 채워집니다 —</option>` +
+      RECIPES.recipes.map(r => `<option value="${r.id}">${esc(r.task)}</option>`).join("");
+  }
+
+  function applyRecipe(id) {
+    const r = RECIPES.recipes.find(x => x.id === id);
+    if (!r) { $("recipeDetail").innerHTML = ""; return; }
+    // reflect the recipe into the calculator inputs (method + data volume anchor)
+    if (r.objective) $("objective").value = r.objective;
+    if (r.tuning) setRadio("tuning", r.tuning);
+    if (r.loraR) $("loraR").value = r.loraR;
+    if (r.epochs) $("epochs").value = r.epochs;
+    const anchor = { cpt_repo: 30000, narrow: 600, domain: 20000, style: 350, reasoning: 1500, instruction: 5000 };
+    if (anchor[r.dataKey] != null) $("examples").value = anchor[r.dataKey];
+    const objName = (KB.objectives.find(o => o.id === r.objective) || {}).name || r.objective;
+    const thenName = r.objectiveThen ? (KB.objectives.find(o => o.id === r.objectiveThen) || {}).name || r.objectiveThen : "";
+    $("recipeDetail").innerHTML =
+      `<div class="block-title">${esc(r.task)}</div>` +
+      `<div class="cost-row"><span>방법</span><b>${esc(objName)}${thenName ? " → " + esc(thenName) : ""} · ${r.tuning.toUpperCase()} (r=${r.loraR})</b></div>` +
+      `<div class="cost-row"><span>데이터</span><b>${esc(r.dataRange)}</b></div>` +
+      `<div class="cost-row"><span>베이스 모델</span><b>${esc(r.base)}</b></div>` +
+      `<div class="cost-row"><span>판정</span><b>${esc(r.verdict)}</b></div>` +
+      `<div class="verdict no" style="margin-top:8px">정직하게: ${esc(r.honesty)}</div>` +
+      `<div class="dim" style="margin-top:6px">${esc(r.note)} · 계산기 입력(방법·데이터량)을 이 레시피로 채웠습니다. GPU·모델을 골라 VRAM·시간을 확인하세요.</div>`;
+    render();
+  }
+
   async function boot() {
     try {
-      const [models, gpus, kb, tech] = await Promise.all([
+      const [models, gpus, kb, tech, recipes] = await Promise.all([
         fetch("data/models.json").then(r => r.json()),
         fetch("data/gpus.json").then(r => r.json()),
         fetch("data/methods.json").then(r => r.json()),
         fetch("data/techniques-2026.json").then(r => r.json()),
+        fetch("data/recipes.json").then(r => r.json()),
       ]);
-      MODELS = models.models; GPUS = gpus.gpus; KB = kb; TECH = tech;
+      MODELS = models.models; GPUS = gpus.gpus; KB = kb; TECH = tech; RECIPES = recipes;
       MODELS.forEach(m => $("model").appendChild(opt(m.id, `${m.name} · ${fmt(m.total_params_b,0)}B`)));
       GPUS.forEach(g => $("gpu").appendChild(opt(g.id, `${g.name}${g.flops_bf16_tf == null ? " (시간 추정 불가)" : ""}`)));
       KB.objectives.forEach(o => $("objective").appendChild(opt(o.id, o.name)));
       $("gpu").value = "rtx4090";
       document.querySelectorAll("select, input").forEach(el => { el.addEventListener("input", render); el.addEventListener("change", render); });
+      // model change -> auto-apply that model's recommended preset (if toggle on), then render
+      const onModelChange = () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); };
+      $("model").addEventListener("change", onModelChange);
+      $("customParams").addEventListener("input", () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); });
+      $("taskPicker").addEventListener("change", () => applyRecipe($("taskPicker").value));
       renderReference();
+      renderGuide();
+      applyPreset(currentModel(), true); // apply preset for the initial model on load
       render();
     } catch (e) {
       $("app").innerHTML = `<div class="err">데이터를 불러오지 못했습니다. 로컬에서는 <code>python3 -m http.server</code>로 여세요 (file://는 fetch가 막힙니다). GitHub Pages에서는 정상 동작합니다.<br><span class="dim">${esc(e.message || e)}</span></div>`;

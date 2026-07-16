@@ -41,6 +41,11 @@ const tAll = loraTrainableParams(4096, 36, 16, "all");
 ok("LoRA modules: attn < attn_all < all", tAttn < tAll4 && tAll4 < tAll);
 ok("LoRA params scale with r", loraTrainableParams(4096, 36, 32, "all") > tAll);
 
+// 4b. GQA-aware kv_dim and explicit intermediate refine the LoRA count
+ok("GQA kv_dim<h cuts attn_all params", loraTrainableParams(4096, 36, 16, "attn_all", 1024) < tAll4);
+ok("smaller intermediate -> fewer MLP LoRA params",
+   loraTrainableParams(4096, 36, 16, "all", 1024, 11008) < loraTrainableParams(4096, 36, 16, "all", 1024));
+
 // 5. Effective batch
 const eb = computeTraining(q8, h100, { ...base, numGpus: 4, perDeviceBatch: 2, gradAccum: 8 });
 ok("effective batch = perDev×accum×gpus", eb.effectiveBatch === 2 * 8 * 4);
