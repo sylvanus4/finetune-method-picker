@@ -4,7 +4,23 @@
   const $ = id => document.getElementById(id);
   const fmt = (x, d = 1) => (x == null || isNaN(x) ? "—" : Number(x).toLocaleString("en-US", { maximumFractionDigits: d }));
   const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-  let MODELS = [], GPUS = [], KB = null, TECH = null, RECIPES = null;
+  let MODELS = [], GPUS = [], KB = null, TECH = null, RECIPES = null, DATASETS = [];
+
+  // --- Best-practice hardware: cheapest GPU config that fits the preset with real headroom ---
+  // Order = cost-efficient training GPUs small->large, all with a known dense-BF16 FLOPS spec (so time
+  // shows). Try 1,2,4,8 GPUs; pick the first (fewest, smallest) that fits with >=12% VRAM headroom.
+  function recommendBestGpu(model, presetCfg) {
+    const order = ["rtx4090", "a100-40", "l40s", "a6000", "a100-80", "h100-80", "h200", "b200", "gb200"];
+    for (const ng of [1, 2, 4, 8, 16, 32, 72]) {
+      for (const gid of order) {
+        const g = GPUS.find(x => x.id === gid);
+        if (!g || g.flops_bf16_tf == null) continue;
+        const r = LLMFT.computeTraining(model, g, Object.assign({}, presetCfg, { numGpus: ng, datasetExamples: 0, _skipMax: true }));
+        if (r.fits && r.vramHeadroomGB >= g.vram_gb * 0.12) return { gpu: gid, numGpus: ng };
+      }
+    }
+    return { gpu: "h200", numGpus: 8 }; // last resort (still may be tight for 1T+ full FT)
+  }
 
   // --- Per-model recommended starting preset (memory-safe, honest starting point, not a promise) ---
   // Size-driven: big -> QLoRA + paged optim (fits modest GPUs); MoE -> attn-only LoRA (common, avoids
@@ -32,10 +48,28 @@
     $("seq").value = ps.seqLen;
     $("gradCkpt").checked = ps.gradCkpt;
     $("epochs").value = ps.epochs;
+    // best-practice hardware: pick GPU + count that fits this preset
+    const hw = recommendBestGpu(model, ps);
+    if (GPUS.find(g => g.id === hw.gpu)) { $("gpu").value = hw.gpu; $("numGpus").value = hw.numGpus; }
     if (announce) {
+      const gName = (GPUS.find(g => g.id === hw.gpu) || {}).name || hw.gpu;
       $("presetNote").style.display = "";
-      $("presetNote").innerHTML = `권장 시작 설정 적용: <b>${ps.tuning.toUpperCase()}</b> · r=${ps.loraR} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(메모리 안전한 출발점 — 필요 시 직접 조정)</span>`;
+      $("presetNote").innerHTML = `권장 셋업: <b>${gName.split(" (")[0]} ×${hw.numGpus}</b> · <b>${ps.tuning.toUpperCase()}</b> r=${ps.loraR} · ${ps.optimizer} · batch ${ps.perDeviceBatch}×accum ${ps.gradAccum} · seq ${ps.seqLen} · ${ps.epochs}ep <span class="dim">(맞는 최소 하드웨어 + 메모리 안전 설정 — 아래에서 직접 조정 가능)</span>`;
     }
+  }
+
+  function applyDataset(id) {
+    const d = DATASETS.find(x => x.id === id);
+    if (!d) { $("datasetNote").style.display = "none"; return; }
+    if (d.objective) $("objective").value = d.objective;
+    if (d.examples != null) $("examples").value = d.examples;
+    if (d.avgTokens != null) $("avgTok").value = d.avgTokens;
+    $("datasetNote").style.display = "";
+    $("datasetNote").innerHTML = `<b>${esc(d.name)}</b> · ${esc(d.size)} · ${esc(d.format)} · ${esc(d.license)} <a class="ref-tag" href="${d.url}" target="_blank" rel="noopener">HF</a><br>` +
+      `<span class="dim">${esc(d.why)} · objective <b>${esc(d.objective)}</b>, 예시 ${Number(d.examples).toLocaleString()} × ~${d.avgTokens}tok 적용됨(추정). 모델을 고르면 best 하드웨어가 잡힙니다.</span>`;
+    // surface the matching task recipe in the guide too (card only — don't override dataset's real values)
+    if (d.recipe) { const tp = $("taskPicker"); if (tp) tp.value = d.recipe; applyRecipe(d.recipe, false); }
+    render();
   }
 
   function opt(v, t) { const o = document.createElement("option"); o.value = v; o.textContent = t; return o; }
@@ -193,16 +227,19 @@
       RECIPES.recipes.map(r => `<option value="${r.id}">${esc(r.task)}</option>`).join("");
   }
 
-  function applyRecipe(id) {
+  function applyRecipe(id, setInputs) {
     const r = RECIPES.recipes.find(x => x.id === id);
     if (!r) { $("recipeDetail").innerHTML = ""; return; }
-    // reflect the recipe into the calculator inputs (method + data volume anchor)
-    if (r.objective) $("objective").value = r.objective;
-    if (r.tuning) setRadio("tuning", r.tuning);
-    if (r.loraR) $("loraR").value = r.loraR;
-    if (r.epochs) $("epochs").value = r.epochs;
-    const anchor = { cpt_repo: 30000, narrow: 600, domain: 20000, style: 350, reasoning: 1500, instruction: 5000 };
-    if (anchor[r.dataKey] != null) $("examples").value = anchor[r.dataKey];
+    // setInputs=true (guide task picker, no dataset): anchor the calculator to the recipe.
+    // setInputs=false (dataset-driven): only render the card — dataset owns data, model preset owns config.
+    if (setInputs !== false) {
+      if (r.objective) $("objective").value = r.objective;
+      if (r.tuning) setRadio("tuning", r.tuning);
+      if (r.loraR) $("loraR").value = r.loraR;
+      if (r.epochs) $("epochs").value = r.epochs;
+      const anchor = { cpt_repo: 30000, narrow: 600, domain: 20000, style: 350, reasoning: 1500, instruction: 5000 };
+      if (anchor[r.dataKey] != null) $("examples").value = anchor[r.dataKey];
+    }
     const objName = (KB.objectives.find(o => o.id === r.objective) || {}).name || r.objective;
     const thenName = r.objectiveThen ? (KB.objectives.find(o => o.id === r.objectiveThen) || {}).name || r.objectiveThen : "";
     $("recipeDetail").innerHTML =
@@ -218,24 +255,29 @@
 
   async function boot() {
     try {
-      const [models, gpus, kb, tech, recipes] = await Promise.all([
+      const [models, gpus, kb, tech, recipes, datasets] = await Promise.all([
         fetch("data/models.json").then(r => r.json()),
         fetch("data/gpus.json").then(r => r.json()),
         fetch("data/methods.json").then(r => r.json()),
         fetch("data/techniques-2026.json").then(r => r.json()),
         fetch("data/recipes.json").then(r => r.json()),
+        fetch("data/datasets.json").then(r => r.json()),
       ]);
-      MODELS = models.models; GPUS = gpus.gpus; KB = kb; TECH = tech; RECIPES = recipes;
+      MODELS = models.models; GPUS = gpus.gpus; KB = kb; TECH = tech; RECIPES = recipes; DATASETS = datasets.datasets;
+      $("dataset").appendChild(opt("", "— 직접 설정 (데이터셋 선택 안 함) —"));
+      DATASETS.forEach(d => $("dataset").appendChild(opt(d.id, `${d.name} · ${d.size}`)));
       MODELS.forEach(m => $("model").appendChild(opt(m.id, `${m.name} · ${fmt(m.total_params_b,0)}B`)));
       GPUS.forEach(g => $("gpu").appendChild(opt(g.id, `${g.name}${g.flops_bf16_tf == null ? " (시간 추정 불가)" : ""}`)));
       KB.objectives.forEach(o => $("objective").appendChild(opt(o.id, o.name)));
+      if (MODELS.find(m => m.id === "qwen3-8b")) $("model").value = "qwen3-8b"; // friendly default (else best-GPU for 753B looks odd)
       $("gpu").value = "rtx4090";
       document.querySelectorAll("select, input").forEach(el => { el.addEventListener("input", render); el.addEventListener("change", render); });
       // model change -> auto-apply that model's recommended preset (if toggle on), then render
       const onModelChange = () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); };
       $("model").addEventListener("change", onModelChange);
       $("customParams").addEventListener("input", () => { if ($("autoPreset").checked) applyPreset(currentModel(), true); render(); });
-      $("taskPicker").addEventListener("change", () => applyRecipe($("taskPicker").value));
+      $("dataset").addEventListener("change", () => applyDataset($("dataset").value));
+      $("taskPicker").addEventListener("change", () => applyRecipe($("taskPicker").value, true));
       renderReference();
       renderGuide();
       applyPreset(currentModel(), true); // apply preset for the initial model on load
